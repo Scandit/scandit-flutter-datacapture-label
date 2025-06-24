@@ -8,8 +8,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
-import 'dart:math';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
@@ -28,8 +27,6 @@ class LabelCapture extends DataCaptureMode {
   final DataCaptureContext _context;
   LabelCaptureSettings _settings;
   late _LabelCaptureController _controller;
-
-  final _modeId = Random().nextInt(0x7FFFFFFF);
 
   LabelCapture._(this._context, this._settings) {
     _controller = _LabelCaptureController.forLabelCapture(this);
@@ -50,7 +47,6 @@ class LabelCapture extends DataCaptureMode {
   @override
   set isEnabled(bool newValue) {
     _enabled = newValue;
-    _controller.setModeEnabledState(newValue);
   }
 
   Future<void> applySettings(LabelCaptureSettings settings) {
@@ -84,13 +80,7 @@ class LabelCapture extends DataCaptureMode {
 
   @override
   Map<String, dynamic> toMap() {
-    return {
-      'type': 'labelCapture',
-      'settings': _settings.toMap(),
-      'modeId': _modeId,
-      'hasListeners': _listeners.isNotEmpty,
-      'enabled': _enabled,
-    };
+    return {'type': 'labelCapture', 'settings': _settings.toMap()};
   }
 }
 
@@ -104,7 +94,7 @@ class _LabelCaptureController {
 
   void subscribeListeners() {
     _methodChannel
-        .invokeMethod('addLabelCaptureListener', _labelCapture._modeId)
+        .invokeMethod('addLabelCaptureListener')
         .then((value) => _setupLabelCaptureSubscription(), onError: _onError);
   }
 
@@ -123,17 +113,13 @@ class _LabelCaptureController {
         _methodChannel
             .invokeMethod('finishLabelCaptureListenerDidUpdateSession', _labelCapture.isEnabled)
             // ignore: unnecessary_lambdas
-            .then((value) => null, onError: (error) => developer.log(error.toString()));
+            .then((value) => null, onError: (error) => log(error));
       });
     });
   }
 
   void setModeEnabledState(bool newValue) {
-    final args = {
-      'modeId': _labelCapture._modeId,
-      'enabled': newValue,
-    };
-    _methodChannel.invokeMethod('setLabelCaptureModeEnabledState', args).then((value) => null, onError: _onError);
+    _methodChannel.invokeMethod('setLabelCaptureModeEnabledState', newValue).then((value) => null, onError: _onError);
   }
 
   Future<void> updateMode() {
@@ -143,18 +129,14 @@ class _LabelCaptureController {
   }
 
   Future<void> applyNewSettings(LabelCaptureSettings settings) {
-    final args = {
-      'modeId': _labelCapture._modeId,
-      'settings': jsonEncode(settings.toMap()),
-    };
-    return _methodChannel.invokeMethod('applyLabelCaptureModeSettings', args).then((value) => null, onError: _onError);
+    return _methodChannel
+        .invokeMethod('applyLabelCaptureModeSettings', jsonEncode(settings.toMap()))
+        .then((value) => null, onError: _onError);
   }
 
   void unsubscribeListeners() {
     _labelCaptureSubscription?.cancel();
-    _methodChannel
-        .invokeMethod('removeLabelCaptureListener', _labelCapture._modeId)
-        .then((value) => null, onError: _onError);
+    _methodChannel.invokeMethod('removeLabelCaptureListener').then((value) => null, onError: _onError);
   }
 
   Future<void> _notifyListenersOfDidUpateSession(LabelCaptureSession session) async {
