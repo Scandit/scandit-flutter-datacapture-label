@@ -54,15 +54,23 @@ class LabelMethodCallHandler {
             result(nil)
 
         case FunctionNames.addLabelCaptureListener:
-            labelModule.addListener()
+            labelModule.addListener(call.arguments as? Int ?? 0)
             result(nil)
 
         case FunctionNames.setLabelCaptureModeEnabledState:
-            guard let enabled = call.arguments as? Bool else {
+            guard let params = call.arguments as? [String: Any?] else {
+                result(FlutterError(code: "error", message: "Parameters have the wrong format.", details: nil))
+                return
+            }
+            guard let enabled = params["enabled"] as? Bool else {
                 result(FlutterError(code: "error", message: "enabled argument is missing", details: nil))
                 return
             }
-            labelModule.setModeEnabled(enabled: enabled)
+            guard let modeId = params["modeId"] as? Int else {
+                result(FlutterError(code: "error", message: "modeId argument is missing", details: nil))
+                return
+            }
+            labelModule.setModeEnabled(modeId: modeId, enabled: enabled)
             result(nil)
 
         case FunctionNames.updateLabelCaptureMode:
@@ -73,14 +81,22 @@ class LabelMethodCallHandler {
             labelModule.updateModeFromJson(modeJson: modeJson, result: FlutterFrameworkResult(reply: result))
 
         case FunctionNames.applyLabelCaptureModeSettings:
-            guard let modeSettingsJson = call.arguments as? String else {
+            guard let params = call.arguments as? [String: Any?] else {
+                result(FlutterError(code: "error", message: "Parameters have the wrong format.", details: nil))
+                return
+            }
+            guard let modeSettingsJson = params["settings"] as? String else {
                 result(FlutterError(code: "error", message: "settings json is missing", details: nil))
                 return
             }
-            labelModule.applyModeSettings(modeSettingsJson: modeSettingsJson, result: FlutterFrameworkResult(reply: result))
+            guard let modeId = params["enabled"] as? Int else {
+                result(FlutterError(code: "error", message: "modeId argument is missing", details: nil))
+                return
+            }
+            labelModule.applyModeSettings(modeId: modeId, modeSettingsJson: modeSettingsJson, result: FlutterFrameworkResult(reply: result))
 
         case FunctionNames.removeLabelCaptureListener:
-            labelModule.removeListener()
+            labelModule.removeListener(call.arguments as? Int ?? 0)
             result(nil)
 
         case FunctionNames.setViewForCapturedLabel:
