@@ -210,16 +210,7 @@ class CustomBarcodeBuilder extends BarcodeFieldBuilder<CustomBarcodeBuilder, Cus
 }
 
 abstract class TextField extends LabelFieldDefinition {
-  List<String> _dataTypePatterns = [];
-
   TextField._(super.name, super._fieldType) : super._();
-
-  @override
-  Map<String, dynamic> toMap() {
-    var json = super.toMap();
-    json['dataTypePatterns'] = _dataTypePatterns;
-    return json;
-  }
 }
 
 abstract class TextFieldBuilder<BuilderType, FieldType> extends LabelFieldDefinitionBuilder<BuilderType, FieldType> {}
@@ -227,6 +218,8 @@ abstract class TextFieldBuilder<BuilderType, FieldType> extends LabelFieldDefini
 class CustomText extends TextField {
   LabelFieldLocationType? _locationType;
   LabelFieldLocation? _location;
+
+  List<String> _dataTypePatterns = [];
 
   CustomText(String name) : super._(name, 'customText');
 
@@ -261,6 +254,7 @@ class CustomText extends TextField {
     if (_locationType != null) {
       json['locationType'] = _locationType?.toString();
     }
+    json['dataTypePatterns'] = dataTypePatterns;
     if (_location != null) {
       json['location'] = _location?.toMap();
     }
@@ -281,11 +275,6 @@ class CustomTextBuilder extends TextFieldBuilder<CustomTextBuilder, CustomText> 
     return this;
   }
 
-  CustomTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
-    return this;
-  }
-
   CustomTextBuilder setDataTypePattern(RegExp dataTypePattern) {
     _dataTypePatterns.add(dataTypePattern.pattern);
     return this;
@@ -301,6 +290,8 @@ class CustomTextBuilder extends TextFieldBuilder<CustomTextBuilder, CustomText> 
 }
 
 class ExpiryDateText extends TextField {
+  List<String> _dataTypePatterns = [];
+
   ExpiryDateText(String name) : super._(name, 'expiryDateText');
 
   LabelDateFormat? labelDateFormat;
@@ -320,6 +311,7 @@ class ExpiryDateText extends TextField {
   Map<String, dynamic> toMap() {
     var json = super.toMap();
     json['labelDateFormat'] = labelDateFormat?.toMap();
+    json['dataTypePatterns'] = dataTypePatterns;
     return json;
   }
 }
@@ -327,7 +319,7 @@ class ExpiryDateText extends TextField {
 class ExpiryDateTextBuilder extends TextFieldBuilder<ExpiryDateTextBuilder, ExpiryDateText> {
   LabelDateFormat? _labelDateFormat;
 
-  final List<String> _dataTypePatterns = [];
+  List<String> _dataTypePatterns = [];
 
   ExpiryDateTextBuilder setDataTypePatterns({String? dataTypePattern, Iterable<String>? dataTypePatterns}) {
     if (dataTypePattern != null) {
@@ -350,7 +342,7 @@ class ExpiryDateTextBuilder extends TextFieldBuilder<ExpiryDateTextBuilder, Expi
   }
 
   ExpiryDateTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
+    _dataTypePatterns = [];
     return this;
   }
 
@@ -442,6 +434,8 @@ class ImeiTwoBarcodeBuilder extends BarcodeFieldBuilder<ImeiTwoBarcodeBuilder, I
 }
 
 class PackingDateText extends TextField {
+  List<String> _dataTypePatterns = [];
+
   PackingDateText(String name) : super._(name, 'packingDateText');
 
   LabelDateFormat? labelDateFormat;
@@ -461,6 +455,7 @@ class PackingDateText extends TextField {
   Map<String, dynamic> toMap() {
     var json = super.toMap();
     json['labelDateFormat'] = labelDateFormat?.toMap();
+    json['dataTypePatterns'] = dataTypePatterns;
     return json;
   }
 }
@@ -468,7 +463,7 @@ class PackingDateText extends TextField {
 class PackingDateTextBuilder extends TextFieldBuilder<PackingDateTextBuilder, PackingDateText> {
   LabelDateFormat? _labelDateFormat;
 
-  final List<String> _dataTypePatterns = [];
+  List<String> _dataTypePatterns = [];
 
   PackingDateTextBuilder setDataTypePatterns({String? dataTypePattern, Iterable<String>? dataTypePatterns}) {
     if (dataTypePattern != null) {
@@ -491,7 +486,7 @@ class PackingDateTextBuilder extends TextFieldBuilder<PackingDateTextBuilder, Pa
   }
 
   PackingDateTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
+    _dataTypePatterns = [];
     return this;
   }
 
@@ -594,39 +589,14 @@ class TotalPriceText extends TextField {
 
   @override
   List<String> get patterns => _patterns;
-
-  List<String> get dataTypePatterns => _dataTypePatterns;
 }
 
 class TotalPriceTextBuilder extends TextFieldBuilder<TotalPriceTextBuilder, TotalPriceText> {
-  final List<String> _dataTypePatterns = [];
-
-  TotalPriceTextBuilder setDataTypePatterns({String? dataTypePattern, Iterable<String>? dataTypePatterns}) {
-    if (dataTypePattern != null) {
-      _dataTypePatterns.add(dataTypePattern);
-    }
-    if (dataTypePatterns != null) {
-      _dataTypePatterns.addAll(dataTypePatterns);
-    }
-    return this;
-  }
-
-  TotalPriceTextBuilder setDataTypePattern(RegExp dataTypePattern) {
-    _dataTypePatterns.add(dataTypePattern.pattern);
-    return this;
-  }
-
-  TotalPriceTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
-    return this;
-  }
-
   TotalPriceText build(String name) {
     return TotalPriceText(name)
       .._patterns = _patterns
       .._isOptional = _isOptional
-      .._hiddenProperties = _hiddenProperties
-      .._dataTypePatterns = _dataTypePatterns;
+      .._hiddenProperties = _hiddenProperties;
   }
 }
 
@@ -641,39 +611,14 @@ class UnitPriceText extends TextField {
 
   @override
   List<String> get patterns => _patterns;
-
-  List<String> get dataTypePatterns => _dataTypePatterns;
 }
 
 class UnitPriceTextBuilder extends TextFieldBuilder<UnitPriceTextBuilder, UnitPriceText> {
-  final List<String> _dataTypePatterns = [];
-
-  UnitPriceTextBuilder setDataTypePatterns({String? dataTypePattern, Iterable<String>? dataTypePatterns}) {
-    if (dataTypePattern != null) {
-      _dataTypePatterns.add(dataTypePattern);
-    }
-    if (dataTypePatterns != null) {
-      _dataTypePatterns.addAll(dataTypePatterns);
-    }
-    return this;
-  }
-
-  UnitPriceTextBuilder setDataTypePattern(RegExp dataTypePattern) {
-    _dataTypePatterns.add(dataTypePattern.pattern);
-    return this;
-  }
-
-  UnitPriceTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
-    return this;
-  }
-
   UnitPriceText build(String name) {
     return UnitPriceText(name)
       .._patterns = _patterns
       .._isOptional = _isOptional
-      .._hiddenProperties = _hiddenProperties
-      .._dataTypePatterns = _dataTypePatterns;
+      .._hiddenProperties = _hiddenProperties;
   }
 }
 
@@ -688,38 +633,13 @@ class WeightText extends TextField {
 
   @override
   List<String> get patterns => _patterns;
-
-  List<String> get dataTypePatterns => _dataTypePatterns;
 }
 
 class WeightTextBuilder extends TextFieldBuilder<WeightTextBuilder, WeightText> {
-  final List<String> _dataTypePatterns = [];
-
-  WeightTextBuilder setDataTypePatterns({String? dataTypePattern, Iterable<String>? dataTypePatterns}) {
-    if (dataTypePattern != null) {
-      _dataTypePatterns.add(dataTypePattern);
-    }
-    if (dataTypePatterns != null) {
-      _dataTypePatterns.addAll(dataTypePatterns);
-    }
-    return this;
-  }
-
-  WeightTextBuilder setDataTypePattern(RegExp dataTypePattern) {
-    _dataTypePatterns.add(dataTypePattern.pattern);
-    return this;
-  }
-
-  WeightTextBuilder resetDataTypePatterns() {
-    _dataTypePatterns.clear();
-    return this;
-  }
-
   WeightText build(String name) {
     return WeightText(name)
       .._patterns = _patterns
       .._isOptional = _isOptional
-      .._hiddenProperties = _hiddenProperties
-      .._dataTypePatterns = _dataTypePatterns;
+      .._hiddenProperties = _hiddenProperties;
   }
 }
