@@ -1,4 +1,4 @@
 
-# 7.3.3
+# 7.2.4
 
 Find the release notes for a specific version in our documentation: https://docs.scandit.com/sdks/flutter/release-notes
