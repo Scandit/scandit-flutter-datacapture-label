@@ -53,6 +53,3 @@ export 'src/ui/label_capture_advanced_overlay_container.dart' show LabelCaptureA
 export 'src/ui/label_capture_advanced_overlay_widget.dart'
     show LabelCaptureAdvancedOverlayWidget, LabelCaptureAdvancedOverlayWidgetState;
 export 'src/ui/label_capture_basic_overlay.dart' show LabelCaptureBasicOverlay, LabelCaptureBasicOverlayListener;
-export 'src/ui/label_capture_validation_flow_overlay.dart'
-    show LabelCaptureValidationFlowOverlay, LabelCaptureValidationFlowListener;
-export 'src/label_capture_validation_flow_settings.dart' show LabelCaptureValidationFlowSettings;

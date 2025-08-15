@@ -103,9 +103,9 @@ class _LabelCaptureController {
   _LabelCaptureController.forLabelCapture(this._labelCapture);
 
   void subscribeListeners() {
-    _methodChannel.invokeMethod('addLabelCaptureListener', {'modeId': _labelCapture._modeId}).then(
-        (value) => _setupLabelCaptureSubscription(),
-        onError: _onError);
+    _methodChannel
+        .invokeMethod('addLabelCaptureListener', _labelCapture._modeId)
+        .then((value) => _setupLabelCaptureSubscription(), onError: _onError);
   }
 
   void _setupLabelCaptureSubscription() {
@@ -121,7 +121,7 @@ class _LabelCaptureController {
 
       _notifyListenersOfDidUpateSession(session).then((value) {
         _methodChannel
-            .invokeMethod('finishLabelCaptureListenerDidUpdateSession', {"isEnabled": _labelCapture.isEnabled})
+            .invokeMethod('finishLabelCaptureListenerDidUpdateSession', _labelCapture.isEnabled)
             // ignore: unnecessary_lambdas
             .then((value) => null, onError: (error) => developer.log(error.toString()));
       });
@@ -137,10 +137,9 @@ class _LabelCaptureController {
   }
 
   Future<void> updateMode() {
-    return _methodChannel.invokeMethod('updateLabelCaptureMode', {
-      'modeId': _labelCapture._modeId,
-      'modeJson': jsonEncode(_labelCapture.toMap())
-    }).then((value) => null, onError: _onError);
+    return _methodChannel
+        .invokeMethod('updateLabelCaptureMode', jsonEncode(_labelCapture.toMap()))
+        .then((value) => null, onError: _onError);
   }
 
   Future<void> applyNewSettings(LabelCaptureSettings settings) {
@@ -153,9 +152,9 @@ class _LabelCaptureController {
 
   void unsubscribeListeners() {
     _labelCaptureSubscription?.cancel();
-    _methodChannel.invokeMethod('removeLabelCaptureListener', {
-      'modeId': _labelCapture._modeId,
-    }).then((value) => null, onError: _onError);
+    _methodChannel
+        .invokeMethod('removeLabelCaptureListener', _labelCapture._modeId)
+        .then((value) => null, onError: _onError);
   }
 
   Future<void> _notifyListenersOfDidUpateSession(LabelCaptureSession session) async {
