@@ -56,3 +56,4 @@ export 'src/ui/label_capture_basic_overlay.dart' show LabelCaptureBasicOverlay, 
 export 'src/ui/label_capture_validation_flow_overlay.dart'
     show LabelCaptureValidationFlowOverlay, LabelCaptureValidationFlowListener;
 export 'src/label_capture_validation_flow_settings.dart' show LabelCaptureValidationFlowSettings;
+export 'src/label_capture_feedback.dart' show LabelCaptureFeedback;

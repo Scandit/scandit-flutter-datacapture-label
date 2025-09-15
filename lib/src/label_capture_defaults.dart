@@ -17,6 +17,7 @@ class LabelCaptureDefaults {
   static late CameraSettingsDefaults _cameraSettingsDefaults;
   static late LabelCaptureBasicOverlayDefaults _labelCaptureBasicOverlayDefaults;
   static late LabelCaptureValidationFlowOverlayDefaults _labelCaptureValidationFlowOverlayDefaults;
+  static late LabelCaptureFeedbackDefaults _labelCaptureFeedbackDefaults;
 
   static CameraSettingsDefaults get cameraSettingsDefaults => _cameraSettingsDefaults;
 
@@ -25,16 +26,20 @@ class LabelCaptureDefaults {
   static LabelCaptureValidationFlowOverlayDefaults get labelCaptureValidationFlowOverlayDefaults =>
       _labelCaptureValidationFlowOverlayDefaults;
 
+  static LabelCaptureFeedbackDefaults get labelCaptureFeedbackDefaults => _labelCaptureFeedbackDefaults;
+
   static bool _isInitialized = false;
 
   static Future<void> initializeDefaults() async {
     if (_isInitialized) return;
     var result = await channel.invokeMethod('getLabelCaptureDefaults');
+
     var json = jsonDecode(result as String);
     _cameraSettingsDefaults = CameraSettingsDefaults.fromJSON(json['RecommendedCameraSettings']);
     _labelCaptureBasicOverlayDefaults = LabelCaptureBasicOverlayDefaults.fromJSON(json['LabelCaptureBasicOverlay']);
     _labelCaptureValidationFlowOverlayDefaults =
         LabelCaptureValidationFlowOverlayDefaults.fromJSON(json['LabelCaptureValidationFlowOverlay']);
+    _labelCaptureFeedbackDefaults = LabelCaptureFeedbackDefaults.fromJSON(jsonDecode(json['feedback']));
 
     _isInitialized = true;
   }
@@ -90,5 +95,53 @@ class LabelCaptureValidationFlowSettingsDefaults {
     final manualInputButtonText = json['manualInputButtonText'];
     return LabelCaptureValidationFlowSettingsDefaults(missingFieldsHintText, standbyHintText, validationHintText,
         validationErrorText, requiredFieldErrorText, manualInputButtonText);
+  }
+}
+
+@immutable
+class LabelCaptureFeedbackDefaults {
+  final Feedback success;
+
+  const LabelCaptureFeedbackDefaults(this.success);
+
+  factory LabelCaptureFeedbackDefaults.fromJSON(Map<String, dynamic> json) {
+    return LabelCaptureFeedbackDefaults(
+      feedbackFromJson(json, 'success'),
+    );
+  }
+
+  static Feedback feedbackFromJson(Map<String, dynamic> json, String key) {
+    var feedbackJson = json[key];
+
+    Sound? feedbackSound;
+    Vibration? feedbackVibration;
+
+    if (feedbackJson.containsKey('sound')) {
+      var soundMap = feedbackJson['sound'] as Map;
+      if (soundMap.isNotEmpty && soundMap.containsKey('resource')) {
+        feedbackSound = Sound(soundMap['resource']);
+      } else {
+        feedbackSound = Sound(null);
+      }
+    }
+    if (feedbackJson.containsKey('vibration')) {
+      var vibrationMap = feedbackJson['vibration'] as Map;
+      if (vibrationMap.isNotEmpty && vibrationMap.containsKey('type')) {
+        var vibrationType = vibrationMap['type'];
+        switch (vibrationType) {
+          case 'selectionHaptic':
+            feedbackVibration = Vibration.selectionHapticFeedback;
+            break;
+          case 'successHaptic':
+            feedbackVibration = Vibration.successHapticFeedback;
+            break;
+          default:
+            feedbackVibration = Vibration.defaultVibration;
+        }
+      } else {
+        feedbackVibration = Vibration.defaultVibration;
+      }
+    }
+    return Feedback(feedbackVibration, feedbackSound);
   }
 }
