@@ -4,6 +4,7 @@
  * Copyright (C) 2025- Scandit AG. All rights reserved.
  */
 
+// ignore: unnecessary_library_name
 library scandit_flutter_datacapture_label;
 
 export 'src/scandit_flutter_datacapture_label.dart' show ScanditFlutterDataCaptureLabel;
