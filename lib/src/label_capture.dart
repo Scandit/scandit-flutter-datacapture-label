@@ -8,31 +8,42 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:math';
 
-import 'package:flutter/services.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
+// ignore: implementation_imports
+import 'package:scandit_flutter_datacapture_core/src/internal/base_controller.dart';
 import 'package:scandit_flutter_datacapture_label/scandit_flutter_datacapture_label.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_capture_defaults.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_plugin_events.dart';
 
 abstract class LabelCaptureListener {
   Future<void> didUpdateSession(
-      LabelCapture labelCapture, LabelCaptureSession session, Future<FrameData?> getFrameData());
+    LabelCapture labelCapture,
+    LabelCaptureSession session,
+    Future<FrameData?> getFrameData(),
+  );
 }
 
 class LabelCapture extends DataCaptureMode {
   final List<LabelCaptureListener> _listeners = [];
   bool _enabled = true;
-  final DataCaptureContext _context;
   LabelCaptureSettings _settings;
   late _LabelCaptureController _controller;
 
-  LabelCapture._(this._context, this._settings) {
-    _controller = _LabelCaptureController.forLabelCapture(this);
-    _context.addMode(this);
+  LabelCaptureFeedback _feedback = LabelCaptureFeedback.defaultFeedback;
+
+  final _modeId = Random().nextInt(0x7FFFFFFF);
+
+  LabelCapture._(DataCaptureContext? context, this._settings) {
+    _controller = _LabelCaptureController(this);
+    context?.setMode(this);
+    _feedback.addListener(_onFeedbackChanged);
   }
 
+  LabelCapture(LabelCaptureSettings settings) : this._(null, settings);
+
+  @Deprecated('Use constructor LabelCapture(LabelCaptureSettings settings) instead.')
   factory LabelCapture.forContext(DataCaptureContext context, LabelCaptureSettings settings) {
     return LabelCapture._(context, settings);
   }
@@ -47,6 +58,7 @@ class LabelCapture extends DataCaptureMode {
   @override
   set isEnabled(bool newValue) {
     _enabled = newValue;
+    _controller.setModeEnabledState(newValue);
   }
 
   Future<void> applySettings(LabelCaptureSettings settings) {
@@ -71,31 +83,60 @@ class LabelCapture extends DataCaptureMode {
     }
   }
 
-  static CameraSettings get recommendedCameraSettings {
+  static CameraSettings createRecommendedCameraSettings() {
     var defaults = LabelCaptureDefaults.cameraSettingsDefaults;
-    return CameraSettings(defaults.preferredResolution, defaults.zoomFactor, defaults.focusRange,
-        defaults.focusGestureStrategy, defaults.zoomGestureZoomFactor,
-        properties: defaults.properties, shouldPreferSmoothAutoFocus: defaults.shouldPreferSmoothAutoFocus);
+    return CameraSettings(
+      defaults.preferredResolution,
+      defaults.zoomFactor,
+      defaults.focusRange,
+      defaults.focusGestureStrategy,
+      defaults.zoomGestureZoomFactor,
+      properties: defaults.properties,
+      shouldPreferSmoothAutoFocus: defaults.shouldPreferSmoothAutoFocus,
+    );
+  }
+
+  @Deprecated('Use createRecommendedCameraSettings() instead.')
+  static CameraSettings get recommendedCameraSettings {
+    return createRecommendedCameraSettings();
+  }
+
+  LabelCaptureFeedback get feedback => _feedback;
+
+  set feedback(LabelCaptureFeedback newValue) {
+    _feedback.removeListener(_onFeedbackChanged);
+    _feedback = newValue;
+    _controller.updateFeedback(newValue);
+    _feedback.addListener(_onFeedbackChanged);
+  }
+
+  void _onFeedbackChanged() {
+    _controller.updateFeedback(_feedback);
   }
 
   @override
   Map<String, dynamic> toMap() {
-    return {'type': 'labelCapture', 'settings': _settings.toMap()};
+    return {
+      'type': 'labelCapture',
+      'settings': _settings.toMap(),
+      'modeId': _modeId,
+      'hasListeners': _listeners.isNotEmpty,
+      'enabled': _enabled,
+      'feedback': _feedback.toMap(),
+    };
   }
 }
 
-class _LabelCaptureController {
-  final MethodChannel _methodChannel = const MethodChannel('com.scandit.datacapture.label/method_channel');
-
+class _LabelCaptureController extends BaseController {
   final LabelCapture _labelCapture;
   StreamSubscription<dynamic>? _labelCaptureSubscription;
 
-  _LabelCaptureController.forLabelCapture(this._labelCapture);
+  _LabelCaptureController(this._labelCapture) : super('com.scandit.datacapture.label/method_channel');
 
   void subscribeListeners() {
-    _methodChannel
-        .invokeMethod('addLabelCaptureListener')
-        .then((value) => _setupLabelCaptureSubscription(), onError: _onError);
+    methodChannel.invokeMethod('addLabelCaptureListener', {'modeId': _labelCapture._modeId}).then(
+        (value) => _setupLabelCaptureSubscription(),
+        onError: onError);
   }
 
   void _setupLabelCaptureSubscription() {
@@ -103,6 +144,12 @@ class _LabelCaptureController {
       if (_labelCapture._listeners.isEmpty) return;
 
       var payload = jsonDecode(event);
+
+      // Check if this event is for our mode
+      if (payload['modeId'] != _labelCapture._modeId) {
+        return;
+      }
+
       if (payload['event'] as String != 'LabelCaptureListener.didUpdateSession' || !payload.containsKey('session')) {
         return;
       }
@@ -110,49 +157,55 @@ class _LabelCaptureController {
       var session = LabelCaptureSession.fromJSON(jsonDecode(payload['session']));
 
       _notifyListenersOfDidUpateSession(session).then((value) {
-        _methodChannel
-            .invokeMethod('finishLabelCaptureListenerDidUpdateSession', _labelCapture.isEnabled)
+        methodChannel.invokeMethod('finishLabelCaptureListenerDidUpdateSession',
+                {"modeId": _labelCapture._modeId, "isEnabled": _labelCapture.isEnabled})
             // ignore: unnecessary_lambdas
-            .then((value) => null, onError: (error) => log(error));
+            .then((value) => null, onError: onError);
       });
     });
   }
 
   void setModeEnabledState(bool newValue) {
-    _methodChannel.invokeMethod('setLabelCaptureModeEnabledState', newValue).then((value) => null, onError: _onError);
+    final args = {'modeId': _labelCapture._modeId, 'enabled': newValue};
+    methodChannel.invokeMethod('setLabelCaptureModeEnabledState', args).then((value) => null, onError: onError);
   }
 
   Future<void> updateMode() {
-    return _methodChannel
-        .invokeMethod('updateLabelCaptureMode', jsonEncode(_labelCapture.toMap()))
-        .then((value) => null, onError: _onError);
+    return methodChannel.invokeMethod('updateLabelCaptureMode', {
+      'modeId': _labelCapture._modeId,
+      'modeJson': jsonEncode(_labelCapture.toMap()),
+    }).then((value) => null, onError: onError);
   }
 
   Future<void> applyNewSettings(LabelCaptureSettings settings) {
-    return _methodChannel
-        .invokeMethod('applyLabelCaptureModeSettings', jsonEncode(settings.toMap()))
-        .then((value) => null, onError: _onError);
+    final args = {'modeId': _labelCapture._modeId, 'settings': jsonEncode(settings.toMap())};
+    return methodChannel.invokeMethod('applyLabelCaptureModeSettings', args).then((value) => null, onError: onError);
   }
 
   void unsubscribeListeners() {
     _labelCaptureSubscription?.cancel();
-    _methodChannel.invokeMethod('removeLabelCaptureListener').then((value) => null, onError: _onError);
+    methodChannel.invokeMethod('removeLabelCaptureListener', {'modeId': _labelCapture._modeId}).then((value) => null,
+        onError: onError);
   }
 
   Future<void> _notifyListenersOfDidUpateSession(LabelCaptureSession session) async {
-    for (var listener in _labelCapture._listeners) {
-      await listener.didUpdateSession(_labelCapture, session, () => _getLastFrameData(session));
+    try {
+      for (var listener in _labelCapture._listeners) {
+        await listener.didUpdateSession(_labelCapture, session, () => _getLastFrameData(session));
+      }
+    } catch (e) {
+      onError(e, StackTrace.current);
     }
   }
 
   Future<FrameData> _getLastFrameData(LabelCaptureSession session) {
-    return _methodChannel
+    return methodChannel
         .invokeMethod('getLastFrameData', session.frameId)
-        .then((value) => DefaultFrameData.fromJSON(Map<String, dynamic>.from(value as Map)), onError: _onError);
+        .then((value) => DefaultFrameData.fromJSON(Map<String, dynamic>.from(value as Map)), onError: onError);
   }
 
-  void _onError(Object? error, StackTrace? stackTrace) {
-    if (error == null) return;
-    throw error;
+  Future<void> updateFeedback(LabelCaptureFeedback feedback) {
+    final args = {'modeId': _labelCapture._modeId, 'feedbackJson': jsonEncode(feedback.toMap())};
+    return methodChannel.invokeMethod('updateLabelCaptureFeedback', args).then((value) => null, onError: onError);
   }
 }
