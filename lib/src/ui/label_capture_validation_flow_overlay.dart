@@ -7,8 +7,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
+// ignore: implementation_imports
+import 'package:scandit_flutter_datacapture_core/src/internal/base_controller.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_capture.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_capture_validation_flow_settings.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_field.dart';
@@ -19,35 +20,44 @@ abstract class LabelCaptureValidationFlowListener {
 }
 
 class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
-  late final _LabelCaptureValidationFlowOverlayController _controller;
+  _LabelCaptureValidationFlowOverlayController? _controller;
+
+  DataCaptureView? _view;
+
+  final LabelCapture _mode;
 
   int get _dataCaptureViewId => view?.viewId ?? -1;
 
   LabelCaptureValidationFlowSettings? _settings;
 
-  LabelCaptureValidationFlowOverlay._() : super('validationFlow') {
-    _controller = _LabelCaptureValidationFlowOverlayController(this);
-  }
+  LabelCaptureValidationFlowOverlay._(this._mode) : super('validationFlow');
 
-  factory LabelCaptureValidationFlowOverlay.withLabelCapture(LabelCapture labelCapture, {DataCaptureView? view}) {
-    final overlay = LabelCaptureValidationFlowOverlay._()..view = view;
-    if (view != null) {
-      view.addOverlay(overlay);
-    }
-    return overlay;
-  }
+  LabelCaptureValidationFlowOverlay(LabelCapture mode) : this._(mode);
 
   @override
-  DataCaptureView? view;
+  DataCaptureView? get view => _view;
+
+  @override
+  set view(DataCaptureView? newValue) {
+    if (newValue == null) {
+      _view = null;
+      _controller?.dispose();
+      _controller = null;
+      return;
+    }
+
+    _view = newValue;
+    _controller ??= _LabelCaptureValidationFlowOverlayController(this);
+  }
 
   LabelCaptureValidationFlowListener? _listener;
 
   LabelCaptureValidationFlowListener? get listener => _listener;
 
   set listener(LabelCaptureValidationFlowListener? newValue) {
-    _controller.unsubscribeListener(); // cleanup first
+    _controller?.unsubscribeListener(); // cleanup first
     if (newValue != null) {
-      _controller.subscribeListener();
+      _controller?.subscribeListener();
     }
 
     _listener = newValue;
@@ -55,7 +65,7 @@ class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
 
   Future<void> applySettings(LabelCaptureValidationFlowSettings settings) {
     _settings = settings;
-    return _controller.updateValidationFlowOverlay();
+    return _controller?.updateValidationFlowOverlay() ?? Future.value();
   }
 
   @override
@@ -63,33 +73,41 @@ class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
     final json = super.toMap();
     json['hasListener'] = listener != null;
     json['settings'] = _settings?.toMap();
+    json['modeId'] = _mode.toMap()['modeId'];
     return json;
   }
 }
 
-class _LabelCaptureValidationFlowOverlayController {
-  final MethodChannel _methodChannel = const MethodChannel('com.scandit.datacapture.label/method_channel');
-
+class _LabelCaptureValidationFlowOverlayController extends BaseController {
   StreamSubscription<dynamic>? _overlaySubscription;
-
-  _LabelCaptureValidationFlowOverlayController(this.overlay);
 
   final LabelCaptureValidationFlowOverlay overlay;
 
+  _LabelCaptureValidationFlowOverlayController(this.overlay) : super('com.scandit.datacapture.label/method_channel') {
+    initialize();
+  }
+
+  void initialize() {
+    if (overlay._listener != null) {
+      subscribeListener();
+    }
+  }
+
   void subscribeListener() {
-    _methodChannel.invokeMethod('registerListenerForValidationFlowEvents', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => _listenToEvents(), onError: _onError);
+    methodChannel.invokeMethod('registerListenerForValidationFlowEvents',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
     _overlaySubscription?.cancel();
-    _methodChannel.invokeMethod('unregisterListenerForValidationFlowEvents', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => null, onError: _onError);
+    _overlaySubscription = null;
+    methodChannel.invokeMethod('unregisterListenerForValidationFlowEvents',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => null, onError: onError);
   }
 
   void _listenToEvents() {
+    if (_overlaySubscription != null) return;
+
     _overlaySubscription = LabelPluginEvents.labelEventStream.listen((event) async {
       if (overlay._listener == null) return;
       final json = jsonDecode(event as String);
@@ -104,14 +122,15 @@ class _LabelCaptureValidationFlowOverlayController {
   }
 
   Future<void> updateValidationFlowOverlay() {
-    return _methodChannel.invokeMethod('updateLabelCaptureValidationFlowOverlay', {
+    return methodChannel.invokeMethod('updateLabelCaptureValidationFlowOverlay', {
       'dataCaptureViewId': overlay._dataCaptureViewId,
-      'overlayJson': jsonEncode(overlay.toMap())
-    }).then((value) => null, onError: _onError);
+      'overlayJson': jsonEncode(overlay.toMap()),
+    }).then((value) => null, onError: onError);
   }
 
-  void _onError(Object? error, StackTrace? stackTrace) {
-    if (error == null) return;
-    throw error;
+  @override
+  void dispose() {
+    unsubscribeListener();
+    super.dispose();
   }
 }

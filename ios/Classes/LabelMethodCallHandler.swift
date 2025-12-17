@@ -5,9 +5,9 @@
  */
 
 import Flutter
+import ScanditFrameworksCore
 import ScanditFrameworksLabel
 import scandit_flutter_datacapture_core
-import ScanditFrameworksCore
 
 class LabelMethodCallHandler {
     private let labelModule: LabelModule
