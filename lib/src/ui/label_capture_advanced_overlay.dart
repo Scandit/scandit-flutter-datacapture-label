@@ -187,7 +187,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': capturedLabel.trackingId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setAnchorForCapturedLabel', {'anchorDataJson': jsonEncode(arguments)});
+    return methodChannel.invokeMethod('setAnchorForCapturedLabel', jsonEncode(arguments));
   }
 
   Future<void> setAnchorForCapturedLabelField(String labelFieldId, Anchor anchor) {
@@ -196,7 +196,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': labelFieldId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setAnchorForCapturedLabelField', {'anchorDataJson': jsonEncode(arguments)});
+    return methodChannel.invokeMethod('setAnchorForCapturedLabelField', jsonEncode(arguments));
   }
 
   Future<void> setOffsetForCapturedLabel(CapturedLabel capturedLabel, PointWithUnit offset) {
@@ -205,7 +205,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': capturedLabel.trackingId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setOffsetForCapturedLabel', {'offsetDataJson': jsonEncode(arguments)});
+    return methodChannel.invokeMethod('setOffsetForCapturedLabel', jsonEncode(arguments));
   }
 
   Future<void> setOffsetForCapturedLabelField(String labelFieldId, PointWithUnit offset) {
@@ -214,7 +214,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': labelFieldId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setOffsetForCapturedLabelField', {'offsetDataJson': jsonEncode(arguments)});
+    return methodChannel.invokeMethod('setOffsetForCapturedLabelField', jsonEncode(arguments));
   }
 
   Future<void> clearCapturedLabelWidgets() {
