@@ -43,6 +43,13 @@ class LabelCaptureBasicOverlay extends DataCaptureOverlay {
 
   LabelCaptureBasicOverlay(LabelCapture mode) : this._(mode);
 
+  @Deprecated('Use the default constructor instead')
+  factory LabelCaptureBasicOverlay.withLabelCapture(LabelCapture labelCapture, {DataCaptureView? view}) {
+    final overlay = LabelCaptureBasicOverlay._(labelCapture);
+    view?.addOverlay(overlay);
+    return overlay;
+  }
+
   @override
   DataCaptureView? get view => _view;
 
@@ -120,7 +127,10 @@ class LabelCaptureBasicOverlay extends DataCaptureOverlay {
   Map<String, dynamic> toMap() {
     final json = super.toMap();
     json['viewfinder'] = viewfinder?.toMap();
-    json['fieldBrushes'] = {'captured': capturedFieldBrush?.toMap(), 'predicted': predictedFieldBrush?.toMap()};
+    json['fieldBrushes'] = {
+      'captured': capturedFieldBrush?.toMap(),
+      'predicted': predictedFieldBrush?.toMap(),
+    };
     json['labelBrush'] = labelBrush?.toMap();
     json['shouldShowScanAreaGuides'] = shouldShowScanAreaGuides;
     json['hasListener'] = _listener != null;
@@ -145,16 +155,18 @@ class _LabelCaptureBasicOverlayController extends BaseController {
   }
 
   void subscribeListener() {
-    methodChannel.invokeMethod('addLabelCaptureBasicOverlayListener',
-        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => _listenToEvents(), onError: onError);
+    methodChannel.invokeMethod('addLabelCaptureBasicOverlayListener', {
+      'dataCaptureViewId': overlay._dataCaptureViewId,
+    }).then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
 
-    methodChannel.invokeMethod('removeLabelCaptureBasicOverlayListener',
-        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => null, onError: onError);
+    methodChannel.invokeMethod('removeLabelCaptureBasicOverlayListener', {
+      'dataCaptureViewId': overlay._dataCaptureViewId,
+    }).then((value) => null, onError: onError);
   }
 
   void _listenToEvents() {
@@ -171,13 +183,12 @@ class _LabelCaptureBasicOverlayController extends BaseController {
             break;
           }
           await methodChannel.invokeMethod(
-            'setLabelCaptureBasicOverlayBrushForLabel',
-            jsonEncode({
-              'brush': jsonEncode(brush.toMap()),
-              'identifier': capturedLabel.trackingId,
-              'dataCaptureViewId': overlay._dataCaptureViewId,
-            }),
-          );
+              'setLabelCaptureBasicOverlayBrushForLabel',
+              jsonEncode({
+                'brush': jsonEncode(brush.toMap()),
+                'identifier': capturedLabel.trackingId,
+                'dataCaptureViewId': overlay._dataCaptureViewId,
+              }));
           break;
         case 'LabelCaptureBasicOverlayListener.brushForFieldOfLabel':
           var labelField = LabelField.fromJSON(jsonDecode(json['field']));
@@ -188,13 +199,12 @@ class _LabelCaptureBasicOverlayController extends BaseController {
           }
           final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
           await methodChannel.invokeMethod(
-            'setLabelCaptureBasicOverlayBrushForFieldOfLabel',
-            jsonEncode({
-              'brush': jsonEncode(brush.toMap()),
-              'identifier': labelFieldId,
-              'dataCaptureViewId': overlay._dataCaptureViewId,
-            }),
-          );
+              'setLabelCaptureBasicOverlayBrushForFieldOfLabel',
+              jsonEncode({
+                'brush': jsonEncode(brush.toMap()),
+                'identifier': labelFieldId,
+                'dataCaptureViewId': overlay._dataCaptureViewId,
+              }));
           break;
         case 'LabelCaptureBasicOverlayListener.didTapLabel':
           var capturedLabel = CapturedLabel.fromJSON(jsonDecode(json['label']), json['frameSequenceId']);
@@ -207,30 +217,28 @@ class _LabelCaptureBasicOverlayController extends BaseController {
   Future<void> updateBasicOverlay() {
     return methodChannel.invokeMethod('updateLabelCaptureBasicOverlay', {
       'dataCaptureViewId': overlay._dataCaptureViewId,
-      'basicOverlayJson': jsonEncode(overlay.toMap()),
+      'basicOverlayJson': jsonEncode(overlay.toMap())
     }).then((value) => null, onError: onError);
   }
 
   Future<void> setBrushForFieldOfLabel(Brush? brush, String fieldId) {
     return methodChannel.invokeMethod(
-      'setLabelCaptureBasicOverlayBrushForFieldOfLabel',
-      jsonEncode({
-        'brush': brush != null ? jsonEncode(brush.toMap()) : null,
-        'identifier': fieldId,
-        'dataCaptureViewId': overlay._dataCaptureViewId,
-      }),
-    );
+        'setLabelCaptureBasicOverlayBrushForFieldOfLabel',
+        jsonEncode({
+          'brush': brush != null ? jsonEncode(brush.toMap()) : null,
+          'identifier': fieldId,
+          'dataCaptureViewId': overlay._dataCaptureViewId,
+        }));
   }
 
   Future<void> setBrushForLabel(Brush? brush, CapturedLabel label) {
     return methodChannel.invokeMethod(
-      'setLabelCaptureBasicOverlayBrushForLabel',
-      jsonEncode({
-        'brush': brush != null ? jsonEncode(brush.toMap()) : null,
-        'identifier': label.trackingId,
-        'dataCaptureViewId': overlay._dataCaptureViewId,
-      }),
-    );
+        'setLabelCaptureBasicOverlayBrushForLabel',
+        jsonEncode({
+          'brush': brush != null ? jsonEncode(brush.toMap()) : null,
+          'identifier': label.trackingId,
+          'dataCaptureViewId': overlay._dataCaptureViewId,
+        }));
   }
 
   @override
