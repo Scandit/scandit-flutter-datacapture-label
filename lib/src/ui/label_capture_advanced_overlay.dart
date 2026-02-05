@@ -19,11 +19,15 @@ import 'package:scandit_flutter_datacapture_label/src/ui/label_capture_advanced_
 
 abstract class LabelCaptureAdvancedOverlayListener {
   Future<LabelCaptureAdvancedOverlayWidget?> widgetForCapturedLabel(
-      LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
+    LabelCaptureAdvancedOverlay overlay,
+    CapturedLabel capturedLabel,
+  );
   Future<Anchor> anchorForCapturedLabel(LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
   Future<PointWithUnit> offsetForCapturedLabel(LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
   Future<LabelCaptureAdvancedOverlayWidget?> widgetForCapturedLabelField(
-      LabelCaptureAdvancedOverlay overlay, LabelField labelField);
+    LabelCaptureAdvancedOverlay overlay,
+    LabelField labelField,
+  );
   Future<Anchor> anchorForCapturedLabelField(LabelCaptureAdvancedOverlay overlay, LabelField labelField);
   Future<PointWithUnit> offsetForCapturedLabelField(LabelCaptureAdvancedOverlay overlay, LabelField labelField);
 }
@@ -40,13 +44,6 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
   LabelCaptureAdvancedOverlay._(this._mode) : super('labelCaptureAdvanced');
 
   LabelCaptureAdvancedOverlay(LabelCapture mode) : this._(mode);
-
-  @Deprecated('Use the default constructor instead')
-  factory LabelCaptureAdvancedOverlay.withLabelCapture(LabelCapture labelCapture, {DataCaptureView? view}) {
-    final overlay = LabelCaptureAdvancedOverlay._(labelCapture);
-    view?.addOverlay(overlay);
-    return overlay;
-  }
 
   @override
   DataCaptureView? get view => _view;
@@ -99,7 +96,10 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
   }
 
   Future<void> setWidgetForCapturedLabelField(
-      LabelField labelField, CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) {
+    LabelField labelField,
+    CapturedLabel capturedLabel,
+    LabelCaptureAdvancedOverlayWidget? widget,
+  ) {
     final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
     return _controller?.setWidgetForCapturedLabelField(labelFieldId, widget) ?? Future.value();
   }
@@ -110,7 +110,10 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
   }
 
   Future<void> setOffsetForCapturedLabelField(
-      LabelField labelField, CapturedLabel capturedLabel, PointWithUnit offset) {
+    LabelField labelField,
+    CapturedLabel capturedLabel,
+    PointWithUnit offset,
+  ) {
     final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
     return _controller?.setOffsetForCapturedLabelField(labelFieldId, offset) ?? Future.value();
   }
@@ -164,10 +167,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
   }
 
   Future<void> setWidgetForCapturedLabelField(String labelFieldId, LabelCaptureAdvancedOverlayWidget? widget) async {
-    var arguments = <String, dynamic>{
-      'identifier': labelFieldId,
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    };
+    var arguments = <String, dynamic>{'identifier': labelFieldId, 'dataCaptureViewId': overlay._dataCaptureViewId};
 
     if (widget != null) {
       arguments['view'] = await widget.toImage;
@@ -187,7 +187,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': capturedLabel.trackingId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setAnchorForCapturedLabel', jsonEncode(arguments));
+    return methodChannel.invokeMethod('setAnchorForCapturedLabel', {'anchorDataJson': jsonEncode(arguments)});
   }
 
   Future<void> setAnchorForCapturedLabelField(String labelFieldId, Anchor anchor) {
@@ -196,7 +196,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': labelFieldId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setAnchorForCapturedLabelField', jsonEncode(arguments));
+    return methodChannel.invokeMethod('setAnchorForCapturedLabelField', {'anchorDataJson': jsonEncode(arguments)});
   }
 
   Future<void> setOffsetForCapturedLabel(CapturedLabel capturedLabel, PointWithUnit offset) {
@@ -205,7 +205,7 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': capturedLabel.trackingId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setOffsetForCapturedLabel', jsonEncode(arguments));
+    return methodChannel.invokeMethod('setOffsetForCapturedLabel', {'offsetDataJson': jsonEncode(arguments)});
   }
 
   Future<void> setOffsetForCapturedLabelField(String labelFieldId, PointWithUnit offset) {
@@ -214,26 +214,23 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
       'identifier': labelFieldId,
       'dataCaptureViewId': overlay._dataCaptureViewId,
     };
-    return methodChannel.invokeMethod('setOffsetForCapturedLabelField', jsonEncode(arguments));
+    return methodChannel.invokeMethod('setOffsetForCapturedLabelField', {'offsetDataJson': jsonEncode(arguments)});
   }
 
   Future<void> clearCapturedLabelWidgets() {
-    return methodChannel.invokeMethod('clearCapturedLabelViews', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    });
+    return methodChannel.invokeMethod('clearCapturedLabelViews', {'dataCaptureViewId': overlay._dataCaptureViewId});
   }
 
   Future<void> update() {
     return methodChannel.invokeMethod('updateLabelCaptureAdvancedOverlay', {
       'dataCaptureViewId': overlay._dataCaptureViewId,
-      'advancedOverlayJson': jsonEncode(overlay.toMap())
+      'advancedOverlayJson': jsonEncode(overlay.toMap()),
     }).then((value) => null, onError: onError);
   }
 
   void subscribeListener() {
-    methodChannel.invokeMethod('addLabelCaptureAdvancedOverlayListener', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => _listenToEvents(), onError: onError);
+    methodChannel.invokeMethod('addLabelCaptureAdvancedOverlayListener',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => _listenToEvents(), onError: onError);
   }
 
   void _listenToEvents() {
@@ -328,9 +325,8 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
 
-    methodChannel.invokeMethod('removeLabelCaptureAdvancedOverlayListener', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => null, onError: onError);
+    methodChannel.invokeMethod('removeLabelCaptureAdvancedOverlayListener',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => null, onError: onError);
   }
 
   @override

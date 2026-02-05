@@ -34,13 +34,6 @@ class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
 
   LabelCaptureValidationFlowOverlay(LabelCapture mode) : this._(mode);
 
-  @Deprecated('Use LabelCaptureValidationFlowOverlay() instead')
-  factory LabelCaptureValidationFlowOverlay.withLabelCapture(LabelCapture labelCapture, {DataCaptureView? view}) {
-    final overlay = LabelCaptureValidationFlowOverlay._(labelCapture);
-    view?.addOverlay(overlay);
-    return overlay;
-  }
-
   @override
   DataCaptureView? get view => _view;
 
@@ -101,17 +94,15 @@ class _LabelCaptureValidationFlowOverlayController extends BaseController {
   }
 
   void subscribeListener() {
-    methodChannel.invokeMethod('registerListenerForValidationFlowEvents', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => _listenToEvents(), onError: onError);
+    methodChannel.invokeMethod('registerListenerForValidationFlowEvents',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
-    methodChannel.invokeMethod('unregisterListenerForValidationFlowEvents', {
-      'dataCaptureViewId': overlay._dataCaptureViewId,
-    }).then((value) => null, onError: onError);
+    methodChannel.invokeMethod('unregisterListenerForValidationFlowEvents',
+        {'dataCaptureViewId': overlay._dataCaptureViewId}).then((value) => null, onError: onError);
   }
 
   void _listenToEvents() {
@@ -133,7 +124,7 @@ class _LabelCaptureValidationFlowOverlayController extends BaseController {
   Future<void> updateValidationFlowOverlay() {
     return methodChannel.invokeMethod('updateLabelCaptureValidationFlowOverlay', {
       'dataCaptureViewId': overlay._dataCaptureViewId,
-      'overlayJson': jsonEncode(overlay.toMap())
+      'overlayJson': jsonEncode(overlay.toMap()),
     }).then((value) => null, onError: onError);
   }
 

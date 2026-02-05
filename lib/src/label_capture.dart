@@ -35,18 +35,12 @@ class LabelCapture extends DataCaptureMode {
 
   final _modeId = Random().nextInt(0x7FFFFFFF);
 
-  LabelCapture._(DataCaptureContext? context, this._settings) {
+  LabelCapture._(this._settings) {
     _controller = _LabelCaptureController(this);
-    context?.setMode(this);
     _feedback.addListener(_onFeedbackChanged);
   }
 
-  LabelCapture(LabelCaptureSettings settings) : this._(null, settings);
-
-  @Deprecated('Use constructor LabelCapture(LabelCaptureSettings settings) instead.')
-  factory LabelCapture.forContext(DataCaptureContext context, LabelCaptureSettings settings) {
-    return LabelCapture._(context, settings);
-  }
+  LabelCapture(LabelCaptureSettings settings) : this._(settings);
 
   @override
   // ignore: unnecessary_overrides
@@ -94,11 +88,6 @@ class LabelCapture extends DataCaptureMode {
       properties: defaults.properties,
       shouldPreferSmoothAutoFocus: defaults.shouldPreferSmoothAutoFocus,
     );
-  }
-
-  @Deprecated('Use createRecommendedCameraSettings() instead.')
-  static CameraSettings get recommendedCameraSettings {
-    return createRecommendedCameraSettings();
   }
 
   LabelCaptureFeedback get feedback => _feedback;
