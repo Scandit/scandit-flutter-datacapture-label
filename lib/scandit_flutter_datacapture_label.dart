@@ -4,6 +4,7 @@
  * Copyright (C) 2025- Scandit AG. All rights reserved.
  */
 
+// ignore: unnecessary_library_name
 library scandit_flutter_datacapture_label;
 
 export 'src/scandit_flutter_datacapture_label.dart' show ScanditFlutterDataCaptureLabel;
@@ -53,3 +54,17 @@ export 'src/ui/label_capture_advanced_overlay_container.dart' show LabelCaptureA
 export 'src/ui/label_capture_advanced_overlay_widget.dart'
     show LabelCaptureAdvancedOverlayWidget, LabelCaptureAdvancedOverlayWidgetState;
 export 'src/ui/label_capture_basic_overlay.dart' show LabelCaptureBasicOverlay, LabelCaptureBasicOverlayListener;
+export 'src/ui/label_capture_validation_flow_overlay.dart'
+    show
+        LabelCaptureValidationFlowOverlay,
+        LabelCaptureValidationFlowListener,
+        LabelCaptureValidationFlowExtendedListener;
+export 'src/label_capture_validation_flow_settings.dart' show LabelCaptureValidationFlowSettings;
+export 'src/label_capture_feedback.dart' show LabelCaptureFeedback;
+export 'src/adaptive_recognition_result_type.dart' show AdaptiveRecognitionResultType;
+export 'src/adaptive_recognition_result.dart' show AdaptiveRecognitionResult;
+export 'src/receipt_scanning_line_item.dart' show ReceiptScanningLineItem;
+export 'src/receipt_scanning_result.dart' show ReceiptScanningResult;
+export 'src/label_capture_adaptive_recognition_settings.dart' show LabelCaptureAdaptiveRecognitionSettings;
+export 'src/ui/label_capture_adaptive_recognition_overlay.dart'
+    show LabelCaptureAdaptiveRecognitionOverlay, LabelCaptureAdaptiveRecognitionListener;

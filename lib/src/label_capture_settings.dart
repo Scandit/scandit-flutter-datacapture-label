@@ -4,6 +4,9 @@
  * Copyright (C) 2025- Scandit AG. All rights reserved.
  */
 
+import 'package:scandit_flutter_datacapture_barcode/scandit_flutter_datacapture_barcode.dart';
+// ignore: implementation_imports
+import 'package:scandit_flutter_datacapture_barcode/src/barcode_defaults.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
 import 'package:scandit_flutter_datacapture_label/scandit_flutter_datacapture_label.dart';
 
@@ -23,6 +26,11 @@ class LabelCaptureSettings implements Serializable {
 
   static LabelCaptureSettingsBuilder builder() {
     return LabelCaptureSettingsBuilder();
+  }
+
+  SymbologySettings settingsForSymbology(Symbology symbology) {
+    var identifier = symbology.toString();
+    return BarcodeDefaults.symbologySettingsDefaults[identifier]!;
   }
 
   void setProperty<T>(String name, T value) {

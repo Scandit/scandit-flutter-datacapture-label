@@ -8,9 +8,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:flutter/services.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
+// ignore: implementation_imports
+import 'package:scandit_flutter_datacapture_core/src/internal/base_controller.dart';
 import 'package:scandit_flutter_datacapture_label/src/captured_label.dart';
+import 'package:scandit_flutter_datacapture_label/src/internal/generated/label_method_handler.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_capture.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_field.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_plugin_events.dart';
@@ -18,41 +20,56 @@ import 'package:scandit_flutter_datacapture_label/src/ui/label_capture_advanced_
 
 abstract class LabelCaptureAdvancedOverlayListener {
   Future<LabelCaptureAdvancedOverlayWidget?> widgetForCapturedLabel(
-      LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
+    LabelCaptureAdvancedOverlay overlay,
+    CapturedLabel capturedLabel,
+  );
   Future<Anchor> anchorForCapturedLabel(LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
   Future<PointWithUnit> offsetForCapturedLabel(LabelCaptureAdvancedOverlay overlay, CapturedLabel capturedLabel);
   Future<LabelCaptureAdvancedOverlayWidget?> widgetForCapturedLabelField(
-      LabelCaptureAdvancedOverlay overlay, LabelField labelField);
+    LabelCaptureAdvancedOverlay overlay,
+    LabelField labelField,
+  );
   Future<Anchor> anchorForCapturedLabelField(LabelCaptureAdvancedOverlay overlay, LabelField labelField);
   Future<PointWithUnit> offsetForCapturedLabelField(LabelCaptureAdvancedOverlay overlay, LabelField labelField);
 }
 
 class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
-  late _LabelCaptureAdvancedOverlayController _controller;
+  _LabelCaptureAdvancedOverlayController? _controller;
 
-  LabelCaptureAdvancedOverlay._() : super('labelCaptureAdvanced') {
-    _controller = _LabelCaptureAdvancedOverlayController(this);
-  }
+  DataCaptureView? _view;
 
-  factory LabelCaptureAdvancedOverlay.withLabelCapture(LabelCapture labelCapture, {DataCaptureView? view}) {
-    final overlay = LabelCaptureAdvancedOverlay._()..view = view;
-    if (view != null) {
-      view.addOverlay(overlay);
-    }
-    return overlay;
-  }
+  final LabelCapture _mode;
+
+  int get _dataCaptureViewId => view?.viewId ?? -1;
+
+  LabelCaptureAdvancedOverlay._(this._mode) : super('labelCaptureAdvanced');
+
+  LabelCaptureAdvancedOverlay(LabelCapture mode) : this._(mode);
 
   @override
-  DataCaptureView? view;
+  DataCaptureView? get view => _view;
+
+  @override
+  set view(DataCaptureView? newValue) {
+    if (newValue == null) {
+      _view = null;
+      _controller?.dispose();
+      _controller = null;
+      return;
+    }
+
+    _view = newValue;
+    _controller ??= _LabelCaptureAdvancedOverlayController(this);
+  }
 
   LabelCaptureAdvancedOverlayListener? _listener;
 
   LabelCaptureAdvancedOverlayListener? get listener => _listener;
 
   set listener(LabelCaptureAdvancedOverlayListener? newValue) {
-    _controller.unsubscribeListener(); // cleanup first
+    _controller?.unsubscribeListener(); // cleanup first
     if (newValue != null) {
-      _controller.subscribeListener();
+      _controller?.subscribeListener();
     }
 
     _listener = newValue;
@@ -64,127 +81,147 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
 
   set shouldShowScanAreaGuides(bool newValue) {
     _shouldShowScanAreaGuides = newValue;
-    _controller.update();
+    _controller?.update();
   }
 
   Future<void> setWidgetForCapturedLabel(CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) {
-    return _controller.setWidgetForCapturedLabel(capturedLabel, widget);
+    return _controller?.setWidgetForCapturedLabel(capturedLabel, widget) ?? Future.value();
   }
 
   Future<void> setAnchorForCapturedLabel(CapturedLabel capturedLabel, Anchor anchor) {
-    return _controller.setAnchorForCapturedLabel(capturedLabel, anchor);
+    return _controller?.setAnchorForCapturedLabel(capturedLabel, anchor) ?? Future.value();
   }
 
   Future<void> setOffsetForCapturedLabel(CapturedLabel capturedLabel, PointWithUnit offset) {
-    return _controller.setOffsetForCapturedLabel(capturedLabel, offset);
+    return _controller?.setOffsetForCapturedLabel(capturedLabel, offset) ?? Future.value();
   }
 
   Future<void> setWidgetForCapturedLabelField(
-      LabelField labelField, CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) {
+    LabelField labelField,
+    CapturedLabel capturedLabel,
+    LabelCaptureAdvancedOverlayWidget? widget,
+  ) {
     final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
-    return _controller.setWidgetForCapturedLabelField(labelFieldId, widget);
+    return _controller?.setWidgetForCapturedLabelField(labelFieldId, widget) ?? Future.value();
   }
 
   Future<void> setAnchorForCapturedLabelField(LabelField labelField, CapturedLabel capturedLabel, Anchor anchor) {
     final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
-    return _controller.setAnchorForCapturedLabelField(labelFieldId, anchor);
+    return _controller?.setAnchorForCapturedLabelField(labelFieldId, anchor) ?? Future.value();
   }
 
   Future<void> setOffsetForCapturedLabelField(
-      LabelField labelField, CapturedLabel capturedLabel, PointWithUnit offset) {
+    LabelField labelField,
+    CapturedLabel capturedLabel,
+    PointWithUnit offset,
+  ) {
     final labelFieldId = '${capturedLabel.trackingId}§${labelField.name}';
-    return _controller.setOffsetForCapturedLabelField(labelFieldId, offset);
+    return _controller?.setOffsetForCapturedLabelField(labelFieldId, offset) ?? Future.value();
   }
 
   Future<void> clearCapturedLabelWidgets() {
-    return _controller.clearCapturedLabelWidgets();
+    return _controller?.clearCapturedLabelWidgets() ?? Future.value();
   }
 
   @override
   Map<String, dynamic> toMap() {
     var json = super.toMap();
     json['shouldShowScanAreaGuides'] = _shouldShowScanAreaGuides;
+    json['hasListener'] = _listener != null;
+    json['modeId'] = _mode.toMap()['modeId'];
     return json;
   }
 }
 
-class _LabelCaptureAdvancedOverlayController {
-  _LabelCaptureAdvancedOverlayController(this.overlay);
-
+class _LabelCaptureAdvancedOverlayController extends BaseController {
   final LabelCaptureAdvancedOverlay overlay;
-
-  final MethodChannel _methodChannel = const MethodChannel('com.scandit.datacapture.label/method_channel');
+  late final LabelMethodHandler labelMethodHandler;
 
   StreamSubscription<dynamic>? _overlaySubscription;
 
   final List<String> _widgetRequestsCache = [];
 
-  Future<void> setWidgetForCapturedLabel(CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) async {
-    var arguments = <String, dynamic>{'identifier': capturedLabel.trackingId};
+  _LabelCaptureAdvancedOverlayController(this.overlay) : super('com.scandit.datacapture.label/method_channel') {
+    labelMethodHandler = LabelMethodHandler(methodChannel);
+    initialize();
+  }
 
-    if (widget != null) {
-      arguments['view'] = await widget.toImage;
-    } else {
-      arguments['view'] = null;
+  void initialize() {
+    if (overlay._listener != null) {
+      subscribeListener();
     }
-    return _methodChannel
-        .invokeMethod('setViewForCapturedLabel', arguments)
+  }
+
+  Future<void> setWidgetForCapturedLabel(CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) async {
+    final viewBytes = await widget?.toImage;
+    return labelMethodHandler
+        .setViewForCapturedLabelFromBytes(
+            dataCaptureViewId: overlay._dataCaptureViewId, trackingId: capturedLabel.trackingId, viewBytes: viewBytes)
         // once the widget is sent we do remove the request from the cache
         .then((value) => _widgetRequestsCache.remove(capturedLabel.trackingId.toString()));
   }
 
   Future<void> setWidgetForCapturedLabelField(String labelFieldId, LabelCaptureAdvancedOverlayWidget? widget) async {
-    var arguments = <String, dynamic>{'identifier': labelFieldId};
-
-    if (widget != null) {
-      arguments['view'] = await widget.toImage;
-    } else {
-      arguments['view'] = null;
-    }
-
-    return _methodChannel
-        .invokeMethod('setViewForCapturedLabelField', arguments)
+    final viewBytes = await widget?.toImage;
+    return labelMethodHandler
+        .setViewForCapturedLabelFieldFromBytes(
+            dataCaptureViewId: overlay._dataCaptureViewId, identifier: labelFieldId, viewBytes: viewBytes)
         // once the widget is sent we do remove the request from the cache
         .then((value) => _widgetRequestsCache.remove(labelFieldId));
   }
 
   Future<void> setAnchorForCapturedLabel(CapturedLabel capturedLabel, Anchor anchor) {
-    var arguments = {'anchor': anchor.toString(), 'identifier': capturedLabel.trackingId};
-    return _methodChannel.invokeMethod('setAnchorForCapturedLabel', jsonEncode(arguments));
+    return labelMethodHandler.setAnchorForCapturedLabel(
+      dataCaptureViewId: overlay._dataCaptureViewId,
+      anchorJson: anchor.toString(),
+      trackingId: capturedLabel.trackingId,
+    );
   }
 
   Future<void> setAnchorForCapturedLabelField(String labelFieldId, Anchor anchor) {
-    var arguments = {'anchor': anchor.toString(), 'identifier': labelFieldId};
-    return _methodChannel.invokeMethod('setAnchorForCapturedLabelField', jsonEncode(arguments));
+    return labelMethodHandler.setAnchorForCapturedLabelField(
+      dataCaptureViewId: overlay._dataCaptureViewId,
+      anchorJson: anchor.toString(),
+      identifier: labelFieldId,
+    );
   }
 
   Future<void> setOffsetForCapturedLabel(CapturedLabel capturedLabel, PointWithUnit offset) {
-    var arguments = {'offset': jsonEncode(offset.toMap()), 'identifier': capturedLabel.trackingId};
-    return _methodChannel.invokeMethod('setOffsetForCapturedLabel', jsonEncode(arguments));
+    return labelMethodHandler.setOffsetForCapturedLabel(
+      dataCaptureViewId: overlay._dataCaptureViewId,
+      offsetJson: jsonEncode(offset.toMap()),
+      trackingId: capturedLabel.trackingId,
+    );
   }
 
   Future<void> setOffsetForCapturedLabelField(String labelFieldId, PointWithUnit offset) {
-    var arguments = {'offset': jsonEncode(offset.toMap()), 'identifier': labelFieldId};
-    return _methodChannel.invokeMethod('setOffsetForCapturedLabelField', jsonEncode(arguments));
+    return labelMethodHandler.setOffsetForCapturedLabelField(
+      dataCaptureViewId: overlay._dataCaptureViewId,
+      offsetJson: jsonEncode(offset.toMap()),
+      identifier: labelFieldId,
+    );
   }
 
   Future<void> clearCapturedLabelWidgets() {
-    return _methodChannel.invokeMethod('clearCapturedLabelViews');
+    return labelMethodHandler.clearCapturedLabelViews(dataCaptureViewId: overlay._dataCaptureViewId);
   }
 
   Future<void> update() {
-    return _methodChannel
-        .invokeMethod('updateLabelCaptureAdvancedOverlay', jsonEncode(overlay.toMap()))
-        .then((value) => null, onError: _onError);
+    return labelMethodHandler
+        .updateLabelCaptureAdvancedOverlay(
+            dataCaptureViewId: overlay._dataCaptureViewId, advancedOverlayJson: jsonEncode(overlay.toMap()))
+        .then((value) => null, onError: onError);
   }
 
   void subscribeListener() {
-    _methodChannel
-        .invokeMethod('addLabelCaptureAdvancedOverlayListener')
-        .then((value) => _listenToEvents(), onError: _onError);
+    labelMethodHandler
+        .addLabelCaptureAdvancedOverlayListener(dataCaptureViewId: overlay._dataCaptureViewId)
+        .then((value) => _listenToEvents(), onError: onError);
   }
 
   void _listenToEvents() {
+    if (_overlaySubscription != null) return;
+
     _overlaySubscription = LabelPluginEvents.labelEventStream.listen((event) async {
       if (overlay._listener == null) return;
 
@@ -272,11 +309,16 @@ class _LabelCaptureAdvancedOverlayController {
 
   void unsubscribeListener() {
     _overlaySubscription?.cancel();
-    _methodChannel.invokeMethod('removeLabelCaptureAdvancedOverlayListener').then((value) => null, onError: _onError);
+    _overlaySubscription = null;
+
+    labelMethodHandler
+        .removeLabelCaptureAdvancedOverlayListener(dataCaptureViewId: overlay._dataCaptureViewId)
+        .then((value) => null, onError: onError);
   }
 
-  void _onError(Object? error, StackTrace? stackTrace) {
-    if (error == null) return;
-    throw error;
+  @override
+  void dispose() {
+    unsubscribeListener();
+    super.dispose();
   }
 }
