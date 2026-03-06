@@ -5,61 +5,25 @@
  */
 
 import Flutter
-import ScanditFrameworksCore
 import ScanditFrameworksLabel
 import scandit_flutter_datacapture_core
+import ScanditFrameworksCore
 
 class LabelMethodCallHandler {
-    private let labelModule: LabelCaptureModule
+    private let labelModule: LabelModule
 
-    init(labelModule: LabelCaptureModule) {
+    init(labelModule: LabelModule) {
         self.labelModule = labelModule
     }
 
     @objc
     func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "getDefaults":
-            do {
-                let defaultsJSONString = String(
-                    data: try JSONSerialization.data(
-                        withJSONObject: self.labelModule.getDefaults(),
-                        options: []
-                    ),
-                    encoding: .utf8
-                )
-                result(defaultsJSONString)
-            } catch let error as NSError {
-                result(
-                    FlutterError(code: "-1", message: "Unable to load the defaults. \(error)", details: error.domain)
-                )
-            }
-        case "executeLabel":
-            let coreModuleName = String(describing: CoreModule.self)
-            guard let coreModule = DefaultServiceLocator.shared.resolve(clazzName: coreModuleName) as? CoreModule else {
-                result(
-                    FlutterError(
-                        code: "-1",
-                        message: "Unable to retrieve the CoreModule from the locator.",
-                        details: nil
-                    )
-                )
-                return
-            }
+        let executionResult = labelModule.execute(
+            method: FlutterFrameworksMethodCall(call),
+            result: FlutterFrameworkResult(reply: result)
+        )
 
-            let flutterResult = FlutterFrameworkResult(reply: result)
-            let handled = coreModule.execute(
-                FlutterFrameworksMethodCall(call),
-                result: flutterResult,
-                module: self.labelModule
-            )
-
-            if !handled {
-                let methodName = call.stringValue(for: "methodName", from: call.params() ?? [:]) ?? "unknown"
-                result(FlutterError(code: "-1", message: "Unknown Core method: \(methodName)", details: nil))
-            }
-
-        default:
+        if !executionResult {
             result(FlutterMethodNotImplemented)
         }
     }

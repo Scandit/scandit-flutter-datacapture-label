@@ -12,7 +12,6 @@ import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_cor
 
 // ignore: avoid_classes_with_only_static_members
 class LabelCaptureDefaults {
-  // Expose channel for testing
   static MethodChannel channel = const MethodChannel('com.scandit.datacapture.label/method_channel');
 
   static late CameraSettingsDefaults _cameraSettingsDefaults;
@@ -33,8 +32,7 @@ class LabelCaptureDefaults {
 
   static Future<void> initializeDefaults() async {
     if (_isInitialized) return;
-    // getDefaults is a direct method call (not routed through executeLabel)
-    var result = await channel.invokeMethod('getDefaults');
+    var result = await channel.invokeMethod('getLabelCaptureDefaults');
 
     var json = jsonDecode(result as String);
     _cameraSettingsDefaults = CameraSettingsDefaults.fromJSON(json['RecommendedCameraSettings']);
