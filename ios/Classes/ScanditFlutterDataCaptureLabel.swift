@@ -5,8 +5,8 @@
  */
 
 import Flutter
-import scandit_flutter_datacapture_core
 import ScanditFrameworksLabel
+import scandit_flutter_datacapture_core
 
 @objc
 public class ScanditFlutterDataCaptureLabel: NSObject, FlutterPlugin {
@@ -21,19 +21,24 @@ public class ScanditFlutterDataCaptureLabel: NSObject, FlutterPlugin {
     @objc
     public static func register(with registrar: FlutterPluginRegistrar) {
         let prefix = "com.scandit.datacapture.label"
-        let methodChannel = FlutterMethodChannel(name: "\(prefix)/method_channel",
-                                                 binaryMessenger: registrar.messenger())
-        let eventChannel = FlutterEventChannel(name: "\(prefix)/event_channel",
-                                               binaryMessenger: registrar.messenger())
+        let methodChannel = FlutterMethodChannel(
+            name: "\(prefix)/method_channel",
+            binaryMessenger: registrar.messenger()
+        )
+        let eventChannel = FlutterEventChannel(
+            name: "\(prefix)/event_channel",
+            binaryMessenger: registrar.messenger()
+        )
 
         let emitter = FlutterEventEmitter(eventChannel: eventChannel)
         let labelCaptureModule = LabelModule(
             emitter: emitter
         )
-        
-        
-        let plugin = ScanditFlutterDataCaptureLabel(labelModule: labelCaptureModule,
-                                                    methodChannel: methodChannel)
+
+        let plugin = ScanditFlutterDataCaptureLabel(
+            labelModule: labelCaptureModule,
+            methodChannel: methodChannel
+        )
         let methodHandler = LabelMethodCallHandler(labelModule: labelCaptureModule)
         labelCaptureModule.didStart()
         methodChannel.setMethodCallHandler(methodHandler.handleMethodCall(_:result:))
