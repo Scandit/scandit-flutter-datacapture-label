@@ -65,6 +65,25 @@ extension LabelDateComponentFormatDeserializer on LabelDateComponentFormat {
   }
 }
 
+enum LabelFieldValueType {
+  date('date'),
+  price('price'),
+  weight('weight'),
+  text('text'),
+  numeric('numeric');
+
+  const LabelFieldValueType(this._name);
+
+  @override
+  String toString() => _name;
+
+  final String _name;
+
+  static LabelFieldValueType fromJSON(String jsonValue) {
+    return LabelFieldValueType.values.firstWhere((element) => element.toString() == jsonValue);
+  }
+}
+
 class LabelField implements Serializable {
   final String _name;
   final LabelFieldType _type;
@@ -74,6 +93,7 @@ class LabelField implements Serializable {
   final Barcode? _barcode;
   final String? _text;
   final LabelDateResult? _dateResult;
+  final LabelFieldValueType _valueType;
 
   LabelField._(
     this._name,
@@ -84,6 +104,7 @@ class LabelField implements Serializable {
     this._barcode,
     this._text,
     this._dateResult,
+    this._valueType,
   );
 
   String get name => _name;
@@ -100,6 +121,8 @@ class LabelField implements Serializable {
 
   String? get text => _text;
 
+  LabelFieldValueType get valueType => _valueType;
+
   factory LabelField.fromJSON(Map<String, dynamic> json) {
     final dateResult = json['date'] != null ? LabelDateResult.fromJSON(json['date']) : null;
     return LabelField._(
@@ -111,6 +134,7 @@ class LabelField implements Serializable {
       json['barcode'] != null ? Barcode.fromJSON(json['barcode']) : null,
       json['text'],
       dateResult,
+      LabelFieldValueType.fromJSON(json['valueType']),
     );
   }
 

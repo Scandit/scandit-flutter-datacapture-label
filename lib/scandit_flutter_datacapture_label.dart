@@ -41,7 +41,8 @@ export 'src/label_field_definition.dart'
         UnitPriceTextBuilder;
 export 'src/label_data_format.dart' show LabelDateFormat;
 export 'src/label_date_result.dart' show LabelDateResult;
-export 'src/label_field.dart' show LabelFieldType, LabelField, LabelDateComponentFormat, LabelFieldState;
+export 'src/label_field.dart'
+    show LabelFieldType, LabelField, LabelDateComponentFormat, LabelFieldState, LabelFieldValueType;
 export 'src/label_field_location.dart' show LabelFieldLocation;
 export 'src/label_field_location_type.dart' show LabelFieldLocationType;
 export 'src/label_capture_settings.dart' show LabelCaptureSettings, LabelCaptureSettingsBuilder;
@@ -55,6 +56,17 @@ export 'src/ui/label_capture_advanced_overlay_widget.dart'
     show LabelCaptureAdvancedOverlayWidget, LabelCaptureAdvancedOverlayWidgetState;
 export 'src/ui/label_capture_basic_overlay.dart' show LabelCaptureBasicOverlay, LabelCaptureBasicOverlayListener;
 export 'src/ui/label_capture_validation_flow_overlay.dart'
-    show LabelCaptureValidationFlowOverlay, LabelCaptureValidationFlowListener;
+    show
+        LabelCaptureValidationFlowOverlay,
+        LabelCaptureValidationFlowListener,
+        LabelCaptureValidationFlowExtendedListener;
 export 'src/label_capture_validation_flow_settings.dart' show LabelCaptureValidationFlowSettings;
 export 'src/label_capture_feedback.dart' show LabelCaptureFeedback;
+export 'src/adaptive_recognition_result_type.dart' show AdaptiveRecognitionResultType;
+export 'src/adaptive_recognition_mode.dart' show AdaptiveRecognitionMode;
+export 'src/adaptive_recognition_result.dart' show AdaptiveRecognitionResult;
+export 'src/receipt_scanning_line_item.dart' show ReceiptScanningLineItem;
+export 'src/receipt_scanning_result.dart' show ReceiptScanningResult;
+export 'src/label_capture_adaptive_recognition_settings.dart' show LabelCaptureAdaptiveRecognitionSettings;
+export 'src/ui/label_capture_adaptive_recognition_overlay.dart'
+    show LabelCaptureAdaptiveRecognitionOverlay, LabelCaptureAdaptiveRecognitionListener;
