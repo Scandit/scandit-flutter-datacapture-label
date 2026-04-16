@@ -12,7 +12,6 @@ import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_cor
 
 // ignore: avoid_classes_with_only_static_members
 class LabelCaptureDefaults {
-  // Expose channel for testing
   static MethodChannel channel = const MethodChannel('com.scandit.datacapture.label/method_channel');
 
   static late CameraSettingsDefaults _cameraSettingsDefaults;
@@ -33,8 +32,7 @@ class LabelCaptureDefaults {
 
   static Future<void> initializeDefaults() async {
     if (_isInitialized) return;
-    // getDefaults is a direct method call (not routed through executeLabel)
-    var result = await channel.invokeMethod('getDefaults');
+    var result = await channel.invokeMethod('getLabelCaptureDefaults');
 
     var json = jsonDecode(result as String);
     _cameraSettingsDefaults = CameraSettingsDefaults.fromJSON(json['RecommendedCameraSettings']);
@@ -84,24 +82,9 @@ class LabelCaptureValidationFlowSettingsDefaults {
   final String validationErrorText;
   final String requiredFieldErrorText;
   final String manualInputButtonText;
-  final String validationFinishButtonText;
-  final String validationRestartButtonText;
-  final String validationPauseButtonText;
-  final String validationAdaptiveScanningText;
-  final String validationScanningText;
 
-  const LabelCaptureValidationFlowSettingsDefaults(
-      this.missingFieldsHintText,
-      this.standbyHintText,
-      this.validationHintText,
-      this.validationErrorText,
-      this.requiredFieldErrorText,
-      this.manualInputButtonText,
-      this.validationFinishButtonText,
-      this.validationRestartButtonText,
-      this.validationPauseButtonText,
-      this.validationAdaptiveScanningText,
-      this.validationScanningText);
+  const LabelCaptureValidationFlowSettingsDefaults(this.missingFieldsHintText, this.standbyHintText,
+      this.validationHintText, this.validationErrorText, this.requiredFieldErrorText, this.manualInputButtonText);
 
   factory LabelCaptureValidationFlowSettingsDefaults.fromJSON(Map<String, dynamic> json) {
     final missingFieldsHintText = json['missingFieldsHintText'];
@@ -110,33 +93,9 @@ class LabelCaptureValidationFlowSettingsDefaults {
     final validationErrorText = json['validationErrorText'];
     final requiredFieldErrorText = json['requiredFieldErrorText'];
     final manualInputButtonText = json['manualInputButtonText'];
-    final validationFinishButtonText = json['validationFinishButtonText'];
-    final validationRestartButtonText = json['validationRestartButtonText'];
-    final validationPauseButtonText = json['validationPauseButtonText'];
-    final validationAdaptiveScanningText = json['validationAdaptiveScanningText'];
-    final validationScanningText = json['validationScanningText'];
-    return LabelCaptureValidationFlowSettingsDefaults(
-        missingFieldsHintText,
-        standbyHintText,
-        validationHintText,
-        validationErrorText,
-        requiredFieldErrorText,
-        manualInputButtonText,
-        validationFinishButtonText,
-        validationRestartButtonText,
-        validationPauseButtonText,
-        validationAdaptiveScanningText,
-        validationScanningText);
+    return LabelCaptureValidationFlowSettingsDefaults(missingFieldsHintText, standbyHintText, validationHintText,
+        validationErrorText, requiredFieldErrorText, manualInputButtonText);
   }
-
-  static String get defaultValidationFinishButtonText => _instance.validationFinishButtonText;
-  static String get defaultValidationRestartButtonText => _instance.validationRestartButtonText;
-  static String get defaultValidationPauseButtonText => _instance.validationPauseButtonText;
-  static String get defaultValidationAdaptiveScanningText => _instance.validationAdaptiveScanningText;
-  static String get defaultValidationScanningText => _instance.validationScanningText;
-
-  static LabelCaptureValidationFlowSettingsDefaults get _instance =>
-      LabelCaptureDefaults.labelCaptureValidationFlowOverlayDefaults.settings;
 }
 
 @immutable
