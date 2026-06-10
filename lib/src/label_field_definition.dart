@@ -20,8 +20,6 @@ abstract class LabelFieldDefinition implements Serializable {
 
   bool _isOptional = false;
 
-  int? _numberOfMandatoryInstances;
-
   Map<String, dynamic> _hiddenProperties = {};
 
   LabelFieldDefinition._(this._name, this._fieldType);
@@ -32,19 +30,14 @@ abstract class LabelFieldDefinition implements Serializable {
 
   bool get isOptional;
 
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
-
   @override
   Map<String, dynamic> toMap() {
-    var json = <String, dynamic>{
+    var json = {
       'name': name,
       'fieldType': _fieldType,
       'patterns': valueRegexes,
       'optional': isOptional,
     };
-    if (_numberOfMandatoryInstances != null) {
-      json['number_of_mandatory_instances'] = _numberOfMandatoryInstances!;
-    }
     for (final hiddenProp in _hiddenProperties.entries) {
       json[hiddenProp.key] = hiddenProp.value;
     }
@@ -56,7 +49,6 @@ abstract class LabelFieldDefinitionBuilder<BuilderType, FieldType> {
   List<String> _valueRegexes = [];
   Map<String, dynamic> _hiddenProperties = {};
   bool _isOptional = false;
-  int? _numberOfMandatoryInstances;
 
   BuilderType setValueRegexes(List<String> valueRegexes) {
     _valueRegexes = valueRegexes;
@@ -80,11 +72,6 @@ abstract class LabelFieldDefinitionBuilder<BuilderType, FieldType> {
 
   BuilderType isOptional(bool optional) {
     _isOptional = optional;
-    return this as BuilderType;
-  }
-
-  BuilderType setNumberOfMandatoryInstances(int? numberOfMandatoryInstances) {
-    _numberOfMandatoryInstances = numberOfMandatoryInstances;
     return this as BuilderType;
   }
 }
@@ -135,7 +122,7 @@ class CustomBarcode extends BarcodeField {
 
   LabelFieldLocation? _location;
 
-  List<String>? _anchorRegexes;
+  List<String> _anchorRegexes = [];
 
   CustomBarcode._(super.name, super.symbologies, super._fieldType) : super._();
 
@@ -165,7 +152,7 @@ class CustomBarcode extends BarcodeField {
     _location = LabelFieldLocation.forCoordinates(left, top, right, bottom);
   }
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
+  List<String> get anchorRegexes => _anchorRegexes;
 
   LabelFieldLocation? get location => _location;
 
@@ -182,17 +169,12 @@ class CustomBarcode extends BarcodeField {
   List<SymbologySettings> get symbologies => _symbologies;
 
   @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
-
-  @override
   Map<String, dynamic> toMap() {
     var json = super.toMap();
     if (_locationType != null) {
       json['locationType'] = _locationType?.toString();
     }
-    if (_anchorRegexes != null) {
-      json['dataTypePatterns'] = _anchorRegexes;
-    }
+    json['dataTypePatterns'] = _anchorRegexes;
     if (_location != null) {
       json['location'] = _location?.toMap();
     }
@@ -201,49 +183,41 @@ class CustomBarcode extends BarcodeField {
 }
 
 class CustomBarcodeBuilder extends BarcodeFieldBuilder<CustomBarcodeBuilder, CustomBarcode> {
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   CustomBarcodeBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   CustomBarcodeBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
   CustomBarcode build(String name) {
-    var barcode = CustomBarcode._fromSymbologies(name, symbologies, 'customBarcode')
+    return CustomBarcode._fromSymbologies(name, symbologies, 'customBarcode')
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      barcode._anchorRegexes = _anchorRegexes;
-    }
-    return barcode;
+      .._hiddenProperties = _hiddenProperties
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
 abstract class TextField extends LabelFieldDefinition {
-  List<String>? _anchorRegexes;
+  List<String> _anchorRegexes = [];
 
   TextField._(super.name, super._fieldType) : super._();
 
   @override
   Map<String, dynamic> toMap() {
     var json = super.toMap();
-    if (_anchorRegexes != null) {
-      json['dataTypePatterns'] = _anchorRegexes;
-    }
+    json['dataTypePatterns'] = _anchorRegexes;
     return json;
   }
 }
@@ -268,7 +242,7 @@ class CustomText extends TextField {
     _location = LabelFieldLocation.forCoordinates(left, top, right, bottom);
   }
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
+  List<String> get anchorRegexes => _anchorRegexes;
 
   LabelFieldLocation? get location => _location;
 
@@ -280,9 +254,6 @@ class CustomText extends TextField {
 
   @override
   List<String> get valueRegexes => _valueRegexes;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 
   @override
   Map<String, dynamic> toMap() {
@@ -298,40 +269,34 @@ class CustomText extends TextField {
 }
 
 class CustomTextBuilder extends TextFieldBuilder<CustomTextBuilder, CustomText> {
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   CustomTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   CustomTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
   CustomTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
   CustomText build(String name) {
-    var text = CustomText(name)
+    return CustomText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+      .._hiddenProperties = _hiddenProperties
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
@@ -340,7 +305,7 @@ class ExpiryDateText extends TextField {
 
   LabelDateFormat? labelDateFormat;
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
+  List<String> get anchorRegexes => _anchorRegexes;
 
   @override
   bool get isOptional => _isOptional;
@@ -350,9 +315,6 @@ class ExpiryDateText extends TextField {
 
   @override
   List<String> get valueRegexes => _valueRegexes;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 
   @override
   Map<String, dynamic> toMap() {
@@ -365,22 +327,20 @@ class ExpiryDateText extends TextField {
 class ExpiryDateTextBuilder extends TextFieldBuilder<ExpiryDateTextBuilder, ExpiryDateText> {
   LabelDateFormat? _labelDateFormat;
 
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   ExpiryDateTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   ExpiryDateTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
@@ -390,21 +350,17 @@ class ExpiryDateTextBuilder extends TextFieldBuilder<ExpiryDateTextBuilder, Expi
   }
 
   ExpiryDateTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
   ExpiryDateText build(String name) {
-    var text = ExpiryDateText(name)
+    return ExpiryDateText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties
-      ..labelDateFormat = _labelDateFormat;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+      ..labelDateFormat = _labelDateFormat
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
@@ -435,9 +391,6 @@ class ImeiOneBarcode extends BarcodeField {
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 }
 
 class ImeiOneBarcodeBuilder extends BarcodeFieldBuilder<ImeiOneBarcodeBuilder, ImeiOneBarcode> {
@@ -445,7 +398,6 @@ class ImeiOneBarcodeBuilder extends BarcodeFieldBuilder<ImeiOneBarcodeBuilder, I
     return ImeiOneBarcode._fromSymbologies(name, symbologies, 'imeiOneBarcode')
       .._valueRegexes.addAll(_valueRegexes)
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
   }
 }
@@ -478,9 +430,6 @@ class ImeiTwoBarcode extends BarcodeField {
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 }
 
 class ImeiTwoBarcodeBuilder extends BarcodeFieldBuilder<ImeiTwoBarcodeBuilder, ImeiTwoBarcode> {
@@ -488,7 +437,6 @@ class ImeiTwoBarcodeBuilder extends BarcodeFieldBuilder<ImeiTwoBarcodeBuilder, I
     return ImeiTwoBarcode._fromSymbologies(name, symbologies, 'imeiTwoBarcode')
       .._valueRegexes.addAll(_valueRegexes)
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
   }
 }
@@ -498,7 +446,7 @@ class PackingDateText extends TextField {
 
   LabelDateFormat? labelDateFormat;
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
+  List<String> get anchorRegexes => _anchorRegexes;
 
   @override
   bool get isOptional => _isOptional;
@@ -508,9 +456,6 @@ class PackingDateText extends TextField {
 
   @override
   List<String> get valueRegexes => _valueRegexes;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 
   @override
   Map<String, dynamic> toMap() {
@@ -523,22 +468,20 @@ class PackingDateText extends TextField {
 class PackingDateTextBuilder extends TextFieldBuilder<PackingDateTextBuilder, PackingDateText> {
   LabelDateFormat? _labelDateFormat;
 
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   PackingDateTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   PackingDateTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
@@ -548,21 +491,17 @@ class PackingDateTextBuilder extends TextFieldBuilder<PackingDateTextBuilder, Pa
   }
 
   PackingDateTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
   PackingDateText build(String name) {
-    var text = PackingDateText(name)
+    return PackingDateText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties
-      ..labelDateFormat = _labelDateFormat;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+      ..labelDateFormat = _labelDateFormat
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
@@ -594,9 +533,6 @@ class PartNumberBarcode extends BarcodeField {
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 }
 
 class PartNumberBarcodeBuilder extends BarcodeFieldBuilder<PartNumberBarcodeBuilder, PartNumberBarcode> {
@@ -604,7 +540,6 @@ class PartNumberBarcodeBuilder extends BarcodeFieldBuilder<PartNumberBarcodeBuil
     return PartNumberBarcode._fromSymbologies(name, symbologies, 'partNumberBarcode')
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
   }
 }
@@ -637,9 +572,6 @@ class SerialNumberBarcode extends BarcodeField {
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
 }
 
 class SerialNumberBarcodeBuilder extends BarcodeFieldBuilder<SerialNumberBarcodeBuilder, SerialNumberBarcode> {
@@ -647,7 +579,6 @@ class SerialNumberBarcodeBuilder extends BarcodeFieldBuilder<SerialNumberBarcode
     return SerialNumberBarcode._fromSymbologies(name, symbologies, 'serialNumberBarcode')
       .._valueRegexes.addAll(_valueRegexes)
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
   }
 }
@@ -664,47 +595,38 @@ class TotalPriceText extends TextField {
   @override
   List<String> get valueRegexes => _valueRegexes;
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
+  List<String> get anchorRegexes => _anchorRegexes;
 }
 
 class TotalPriceTextBuilder extends TextFieldBuilder<TotalPriceTextBuilder, TotalPriceText> {
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   TotalPriceTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   TotalPriceTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
   TotalPriceTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
   TotalPriceText build(String name) {
-    var text = TotalPriceText(name)
+    return TotalPriceText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+      .._hiddenProperties = _hiddenProperties
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
@@ -720,47 +642,38 @@ class UnitPriceText extends TextField {
   @override
   List<String> get valueRegexes => _valueRegexes;
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
+  List<String> get anchorRegexes => _anchorRegexes;
 }
 
 class UnitPriceTextBuilder extends TextFieldBuilder<UnitPriceTextBuilder, UnitPriceText> {
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   UnitPriceTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   UnitPriceTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
   UnitPriceTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
   UnitPriceText build(String name) {
-    var text = UnitPriceText(name)
+    return UnitPriceText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+      .._hiddenProperties = _hiddenProperties
+      .._anchorRegexes = _anchorRegexes;
   }
 }
 
@@ -776,34 +689,29 @@ class WeightText extends TextField {
   @override
   List<String> get valueRegexes => _valueRegexes;
 
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
+  List<String> get anchorRegexes => _anchorRegexes;
 }
 
 class WeightTextBuilder extends TextFieldBuilder<WeightTextBuilder, WeightText> {
-  List<String>? _anchorRegexes;
+  final List<String> _anchorRegexes = [];
 
   WeightTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
     if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
+      _anchorRegexes.add(anchorRegex);
     }
     if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
+      _anchorRegexes.addAll(anchorRegexes);
     }
     return this;
   }
 
   WeightTextBuilder setAnchorRegex(RegExp anchorRegex) {
-    _anchorRegexes ??= [];
-    _anchorRegexes?.add(anchorRegex.pattern);
+    _anchorRegexes.add(anchorRegex.pattern);
     return this;
   }
 
   WeightTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
+    _anchorRegexes.clear();
     return this;
   }
 
@@ -811,66 +719,6 @@ class WeightTextBuilder extends TextFieldBuilder<WeightTextBuilder, WeightText> 
     return WeightText(name)
       .._valueRegexes = _valueRegexes
       .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties
-      .._anchorRegexes = _anchorRegexes;
-  }
-}
-
-class DateText extends TextField {
-  late final LabelDateFormat _labelDateFormat;
-
-  DateText(String name, LabelDateFormat labelDateFormat) : super._(name, 'dateText') {
-    _labelDateFormat = labelDateFormat;
-  }
-
-  LabelDateFormat get labelDateFormat => _labelDateFormat;
-
-  @override
-  bool get isOptional => _isOptional;
-
-  @override
-  String get name => _name;
-
-  @override
-  List<String> get valueRegexes => _valueRegexes;
-
-  @override
-  int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
-
-  List<String> get anchorRegexes => _anchorRegexes ?? [];
-}
-
-class DateTextBuilder extends TextFieldBuilder<DateTextBuilder, DateText> {
-  List<String>? _anchorRegexes;
-  LabelDateFormat? _labelDateFormat;
-
-  DateTextBuilder setAnchorRegexes({String? anchorRegex, Iterable<String>? anchorRegexes}) {
-    _anchorRegexes ??= [];
-    if (anchorRegex != null) {
-      _anchorRegexes?.add(anchorRegex);
-    }
-    if (anchorRegexes != null) {
-      _anchorRegexes?.addAll(anchorRegexes);
-    }
-    return this;
-  }
-
-  DateTextBuilder resetAnchorRegexes() {
-    _anchorRegexes?.clear();
-    return this;
-  }
-
-  DateTextBuilder setLabelDateFormat(LabelDateFormat labelDateFormat) {
-    _labelDateFormat = labelDateFormat;
-    return this;
-  }
-
-  DateText build(String name) {
-    return DateText(name, _labelDateFormat ?? LabelDateFormat(LabelDateComponentFormat.dmy, true))
-      .._valueRegexes = _valueRegexes
-      .._isOptional = _isOptional
-      .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties
       .._anchorRegexes = _anchorRegexes;
   }
