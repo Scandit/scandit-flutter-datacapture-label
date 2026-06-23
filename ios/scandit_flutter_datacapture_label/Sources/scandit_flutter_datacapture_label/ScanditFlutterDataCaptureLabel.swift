@@ -11,9 +11,9 @@ import scandit_flutter_datacapture_core
 @objc
 public class ScanditFlutterDataCaptureLabel: NSObject, FlutterPlugin {
     private let methodChannel: FlutterMethodChannel
-    private let labelModule: LabelModule
+    private let labelModule: LabelCaptureModule
 
-    init(labelModule: LabelModule, methodChannel: FlutterMethodChannel) {
+    init(labelModule: LabelCaptureModule, methodChannel: FlutterMethodChannel) {
         self.methodChannel = methodChannel
         self.labelModule = labelModule
     }
@@ -31,7 +31,7 @@ public class ScanditFlutterDataCaptureLabel: NSObject, FlutterPlugin {
         )
 
         let emitter = FlutterEventEmitter(eventChannel: eventChannel)
-        let labelCaptureModule = LabelModule(
+        let labelCaptureModule = LabelCaptureModule(
             emitter: emitter
         )
 
