@@ -33,11 +33,8 @@ abstract class LabelCaptureAdvancedOverlayListener {
   Future<PointWithUnit> offsetForCapturedLabelField(LabelCaptureAdvancedOverlay overlay, LabelField labelField);
 }
 
-class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
-  _LabelCaptureAdvancedOverlayController? _controller;
-
-  DataCaptureView? _view;
-
+class LabelCaptureAdvancedOverlay extends DataCaptureOverlay
+    with ViewAttachable, _LabelCaptureAdvancedOverlayViewAttachable {
   final LabelCapture _mode;
 
   int get _dataCaptureViewId => view?.viewId ?? -1;
@@ -47,19 +44,16 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
   LabelCaptureAdvancedOverlay(LabelCapture mode) : this._(mode);
 
   @override
-  DataCaptureView? get view => _view;
+  DataCaptureView? get view => attachedView;
 
   @override
   set view(DataCaptureView? newValue) {
     if (newValue == null) {
-      _view = null;
-      _controller?.dispose();
-      _controller = null;
+      attachedView?.unregisterAttachable(this);
       return;
     }
 
-    _view = newValue;
-    _controller ??= _LabelCaptureAdvancedOverlayController(this);
+    newValue.registerAttachable(this);
   }
 
   LabelCaptureAdvancedOverlayListener? _listener;
@@ -133,6 +127,38 @@ class LabelCaptureAdvancedOverlay extends DataCaptureOverlay {
   }
 }
 
+/// Holds the [ViewAttachable] lifecycle for [LabelCaptureAdvancedOverlay].
+///
+/// Kept in a (private) mixin so the docs signature collector — which only inspects class
+/// declarations — does not treat these callbacks as public API. (Mirrors `PrivateZoomGesture`.)
+///
+/// [SDC-30872] Register the listener in [onViewInitialized] (once the viewId is valid) and
+/// re-register on view recreation, instead of eagerly at view-set time when the id may still
+/// be -1 — which on iOS silently leaves the overlay delegate unset.
+mixin _LabelCaptureAdvancedOverlayViewAttachable on ViewAttachable {
+  _LabelCaptureAdvancedOverlayController? _controller;
+
+  @override
+  void onAttachToView(DataCaptureView view) {
+    super.onAttachToView(view);
+    _controller ??= _LabelCaptureAdvancedOverlayController(this as LabelCaptureAdvancedOverlay);
+  }
+
+  @override
+  void onViewInitialized(int viewId) {
+    if ((this as LabelCaptureAdvancedOverlay)._listener != null) {
+      _controller?.subscribeListener();
+    }
+  }
+
+  @override
+  void onDetachFromView() {
+    _controller?.dispose();
+    _controller = null;
+    super.onDetachFromView();
+  }
+}
+
 class _LabelCaptureAdvancedOverlayController extends BaseController {
   final LabelCaptureAdvancedOverlay overlay;
   late final LabelMethodHandler labelMethodHandler;
@@ -141,15 +167,10 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
 
   final List<String> _widgetRequestsCache = [];
 
+  bool _isRegistered = false;
+
   _LabelCaptureAdvancedOverlayController(this.overlay) : super('com.scandit.datacapture.label/method_channel') {
     labelMethodHandler = LabelMethodHandler(methodChannel);
-    initialize();
-  }
-
-  void initialize() {
-    if (overlay._listener != null) {
-      subscribeListener();
-    }
   }
 
   Future<void> setWidgetForCapturedLabel(CapturedLabel capturedLabel, LabelCaptureAdvancedOverlayWidget? widget) async {
@@ -214,6 +235,8 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
   }
 
   void subscribeListener() {
+    if (_isRegistered) return;
+    _isRegistered = true;
     labelMethodHandler
         .addLabelCaptureAdvancedOverlayListener(dataCaptureViewId: overlay._dataCaptureViewId)
         .then((value) => _listenToEvents(), onError: onError);
@@ -291,6 +314,8 @@ class _LabelCaptureAdvancedOverlayController extends BaseController {
   }
 
   void unsubscribeListener() {
+    if (!_isRegistered) return;
+    _isRegistered = false;
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
 

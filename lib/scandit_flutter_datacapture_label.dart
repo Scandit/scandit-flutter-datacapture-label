@@ -19,6 +19,8 @@ export 'src/label_field_definition.dart'
         CustomBarcodeBuilder,
         CustomText,
         CustomTextBuilder,
+        DateText,
+        DateTextBuilder,
         ExpiryDateText,
         ExpiryDateTextBuilder,
         ImeiOneBarcode,

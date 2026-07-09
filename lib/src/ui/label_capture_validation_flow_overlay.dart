@@ -33,11 +33,8 @@ abstract class LabelCaptureValidationFlowExtendedListener extends LabelCaptureVa
   );
 }
 
-class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
-  _LabelCaptureValidationFlowOverlayController? _controller;
-
-  DataCaptureView? _view;
-
+class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay
+    with ViewAttachable, _LabelCaptureValidationFlowOverlayViewAttachable {
   final LabelCapture _mode;
 
   int get _dataCaptureViewId => view?.viewId ?? -1;
@@ -56,19 +53,16 @@ class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
   LabelCaptureValidationFlowOverlay(LabelCapture mode) : this._(mode);
 
   @override
-  DataCaptureView? get view => _view;
+  DataCaptureView? get view => attachedView;
 
   @override
   set view(DataCaptureView? newValue) {
     if (newValue == null) {
-      _view = null;
-      _controller?.dispose();
-      _controller = null;
+      attachedView?.unregisterAttachable(this);
       return;
     }
 
-    _view = newValue;
-    _controller ??= _LabelCaptureValidationFlowOverlayController(this);
+    newValue.registerAttachable(this);
   }
 
   LabelCaptureValidationFlowListener? _listener;
@@ -100,30 +94,64 @@ class LabelCaptureValidationFlowOverlay extends DataCaptureOverlay {
   }
 }
 
+/// Holds the [ViewAttachable] lifecycle for [LabelCaptureValidationFlowOverlay].
+///
+/// These callbacks are kept in a (private) mixin rather than on the overlay class on
+/// purpose: the docs signature collector only inspects class declarations, so methods
+/// declared here are not mistaken for public API. (Mirrors `PrivateZoomGesture` in core.)
+///
+/// [SDC-30872] The listener is registered in [onViewInitialized] — only once the view's
+/// controller is ready and the viewId is valid — and re-registered when the view is
+/// recreated. Registering eagerly (while viewId is still -1) makes the iOS native side
+/// fail to resolve the overlay and silently leave the delegate unset, so
+/// didCaptureLabelWithFields never fires and scanning stays continuous.
+mixin _LabelCaptureValidationFlowOverlayViewAttachable on ViewAttachable {
+  _LabelCaptureValidationFlowOverlayController? _controller;
+
+  @override
+  void onAttachToView(DataCaptureView view) {
+    super.onAttachToView(view);
+    _controller ??= _LabelCaptureValidationFlowOverlayController(this as LabelCaptureValidationFlowOverlay);
+  }
+
+  @override
+  void onViewInitialized(int viewId) {
+    if ((this as LabelCaptureValidationFlowOverlay)._listener != null) {
+      _controller?.subscribeListener();
+    }
+  }
+
+  @override
+  void onDetachFromView() {
+    _controller?.dispose();
+    _controller = null;
+    super.onDetachFromView();
+  }
+}
+
 class _LabelCaptureValidationFlowOverlayController extends BaseController {
   StreamSubscription<dynamic>? _overlaySubscription;
   late final LabelMethodHandler labelMethodHandler;
 
   final LabelCaptureValidationFlowOverlay overlay;
 
+  bool _isRegistered = false;
+
   _LabelCaptureValidationFlowOverlayController(this.overlay) : super('com.scandit.datacapture.label/method_channel') {
     labelMethodHandler = LabelMethodHandler(methodChannel);
-    initialize();
-  }
-
-  void initialize() {
-    if (overlay._listener != null) {
-      subscribeListener();
-    }
   }
 
   void subscribeListener() {
+    if (_isRegistered) return;
+    _isRegistered = true;
     labelMethodHandler
         .registerListenerForValidationFlowEvents(dataCaptureViewId: overlay._dataCaptureViewId)
         .then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
+    if (!_isRegistered) return;
+    _isRegistered = false;
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
     labelMethodHandler

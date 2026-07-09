@@ -25,7 +25,7 @@ abstract class LabelCaptureBasicOverlayListener {
   void didTapLabel(LabelCaptureBasicOverlay overlay, CapturedLabel label);
 }
 
-class LabelCaptureBasicOverlay extends DataCaptureOverlay {
+class LabelCaptureBasicOverlay extends DataCaptureOverlay with ViewAttachable, _LabelCaptureBasicOverlayViewAttachable {
   static Brush get defaultPredictedFieldBrush =>
       LabelCaptureDefaults.labelCaptureBasicOverlayDefaults.defaultPredictedFieldBrush;
 
@@ -34,11 +34,7 @@ class LabelCaptureBasicOverlay extends DataCaptureOverlay {
 
   static Brush get defaultLabelBrush => LabelCaptureDefaults.labelCaptureBasicOverlayDefaults.defaultLabelBrush;
 
-  DataCaptureView? _view;
-
   final LabelCapture _mode;
-
-  _LabelCaptureBasicOverlayController? _controller;
 
   int get _dataCaptureViewId => view?.viewId ?? -1;
 
@@ -47,19 +43,16 @@ class LabelCaptureBasicOverlay extends DataCaptureOverlay {
   LabelCaptureBasicOverlay(LabelCapture labelCapture) : this._(labelCapture);
 
   @override
-  DataCaptureView? get view => _view;
+  DataCaptureView? get view => attachedView;
 
   @override
   set view(DataCaptureView? newValue) {
     if (newValue == null) {
-      _view = null;
-      _controller?.dispose();
-      _controller = null;
+      attachedView?.unregisterAttachable(this);
       return;
     }
 
-    _view = newValue;
-    _controller ??= _LabelCaptureBasicOverlayController(this);
+    newValue.registerAttachable(this);
   }
 
   Brush? _predictedFieldBrush = LabelCaptureDefaults.labelCaptureBasicOverlayDefaults.defaultPredictedFieldBrush;
@@ -132,30 +125,61 @@ class LabelCaptureBasicOverlay extends DataCaptureOverlay {
   }
 }
 
+/// Holds the [ViewAttachable] lifecycle for [LabelCaptureBasicOverlay].
+///
+/// Kept in a (private) mixin so the docs signature collector — which only inspects class
+/// declarations — does not treat these callbacks as public API. (Mirrors `PrivateZoomGesture`.)
+///
+/// [SDC-30872] Register the listener in [onViewInitialized] (once the viewId is valid) and
+/// re-register on view recreation, instead of eagerly at view-set time when the id may still
+/// be -1 — which on iOS silently leaves the overlay delegate unset.
+mixin _LabelCaptureBasicOverlayViewAttachable on ViewAttachable {
+  _LabelCaptureBasicOverlayController? _controller;
+
+  @override
+  void onAttachToView(DataCaptureView view) {
+    super.onAttachToView(view);
+    _controller ??= _LabelCaptureBasicOverlayController(this as LabelCaptureBasicOverlay);
+  }
+
+  @override
+  void onViewInitialized(int viewId) {
+    if ((this as LabelCaptureBasicOverlay)._listener != null) {
+      _controller?.subscribeListener();
+    }
+  }
+
+  @override
+  void onDetachFromView() {
+    _controller?.dispose();
+    _controller = null;
+    super.onDetachFromView();
+  }
+}
+
 class _LabelCaptureBasicOverlayController extends BaseController {
   StreamSubscription<dynamic>? _overlaySubscription;
   late final LabelMethodHandler labelMethodHandler;
 
   final LabelCaptureBasicOverlay overlay;
 
+  bool _isRegistered = false;
+
   _LabelCaptureBasicOverlayController(this.overlay) : super('com.scandit.datacapture.label/method_channel') {
     labelMethodHandler = LabelMethodHandler(methodChannel);
-    initialize();
-  }
-
-  void initialize() {
-    if (overlay._listener != null) {
-      subscribeListener();
-    }
   }
 
   void subscribeListener() {
+    if (_isRegistered) return;
+    _isRegistered = true;
     labelMethodHandler
         .addLabelCaptureBasicOverlayListener(dataCaptureViewId: overlay._dataCaptureViewId)
         .then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
+    if (!_isRegistered) return;
+    _isRegistered = false;
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
 

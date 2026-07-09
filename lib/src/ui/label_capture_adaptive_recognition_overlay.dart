@@ -22,11 +22,8 @@ abstract class LabelCaptureAdaptiveRecognitionListener {
   void didFail();
 }
 
-class LabelCaptureAdaptiveRecognitionOverlay extends DataCaptureOverlay {
-  _LabelCaptureAdaptiveRecognitionOverlayController? _controller;
-
-  DataCaptureView? _view;
-
+class LabelCaptureAdaptiveRecognitionOverlay extends DataCaptureOverlay
+    with ViewAttachable, _LabelCaptureAdaptiveRecognitionOverlayViewAttachable {
   final LabelCapture _mode;
 
   int get _dataCaptureViewId => view?.viewId ?? -1;
@@ -38,19 +35,16 @@ class LabelCaptureAdaptiveRecognitionOverlay extends DataCaptureOverlay {
   LabelCaptureAdaptiveRecognitionOverlay(LabelCapture mode) : this._(mode);
 
   @override
-  DataCaptureView? get view => _view;
+  DataCaptureView? get view => attachedView;
 
   @override
   set view(DataCaptureView? newValue) {
     if (newValue == null) {
-      _view = null;
-      _controller?.dispose();
-      _controller = null;
+      attachedView?.unregisterAttachable(this);
       return;
     }
 
-    _view = newValue;
-    _controller ??= _LabelCaptureAdaptiveRecognitionOverlayController(this);
+    newValue.registerAttachable(this);
   }
 
   LabelCaptureAdaptiveRecognitionListener? _listener;
@@ -81,31 +75,62 @@ class LabelCaptureAdaptiveRecognitionOverlay extends DataCaptureOverlay {
   }
 }
 
+/// Holds the [ViewAttachable] lifecycle for [LabelCaptureAdaptiveRecognitionOverlay].
+///
+/// Kept in a (private) mixin so the docs signature collector — which only inspects class
+/// declarations — does not treat these callbacks as public API. (Mirrors `PrivateZoomGesture`.)
+///
+/// [SDC-30872] Register the listener in [onViewInitialized] (once the viewId is valid) and
+/// re-register on view recreation, instead of eagerly at view-set time when the id may still
+/// be -1 — which on iOS silently leaves the overlay delegate unset.
+mixin _LabelCaptureAdaptiveRecognitionOverlayViewAttachable on ViewAttachable {
+  _LabelCaptureAdaptiveRecognitionOverlayController? _controller;
+
+  @override
+  void onAttachToView(DataCaptureView view) {
+    super.onAttachToView(view);
+    _controller ??= _LabelCaptureAdaptiveRecognitionOverlayController(this as LabelCaptureAdaptiveRecognitionOverlay);
+  }
+
+  @override
+  void onViewInitialized(int viewId) {
+    if ((this as LabelCaptureAdaptiveRecognitionOverlay)._listener != null) {
+      _controller?.subscribeListener();
+    }
+  }
+
+  @override
+  void onDetachFromView() {
+    _controller?.dispose();
+    _controller = null;
+    super.onDetachFromView();
+  }
+}
+
 class _LabelCaptureAdaptiveRecognitionOverlayController extends BaseController {
   StreamSubscription<dynamic>? _overlaySubscription;
   late final LabelMethodHandler labelMethodHandler;
 
   final LabelCaptureAdaptiveRecognitionOverlay overlay;
 
+  bool _isRegistered = false;
+
   _LabelCaptureAdaptiveRecognitionOverlayController(this.overlay)
       : super('com.scandit.datacapture.label/method_channel') {
     labelMethodHandler = LabelMethodHandler(methodChannel);
-    initialize();
-  }
-
-  void initialize() {
-    if (overlay._listener != null) {
-      subscribeListener();
-    }
   }
 
   void subscribeListener() {
+    if (_isRegistered) return;
+    _isRegistered = true;
     labelMethodHandler
         .registerListenerForAdaptiveRecognitionOverlayEvents(dataCaptureViewId: overlay._dataCaptureViewId)
         .then((value) => _listenToEvents(), onError: onError);
   }
 
   void unsubscribeListener() {
+    if (!_isRegistered) return;
+    _isRegistered = false;
     _overlaySubscription?.cancel();
     _overlaySubscription = null;
     labelMethodHandler
