@@ -170,13 +170,13 @@ class _LabelCaptureController extends BaseController {
 
   Future<void> updateMode() {
     return labelMethodHandler
-        .updateLabelCaptureMode(modeJson: _labelCapture.toMap())
+        .updateLabelCaptureMode(modeJson: jsonEncode(_labelCapture.toMap()))
         .then((value) => null, onError: onError);
   }
 
   Future<void> applyNewSettings(LabelCaptureSettings settings) {
     return labelMethodHandler
-        .updateLabelCaptureSettings(modeId: _labelCapture._modeId, settingsJson: settings.toMap())
+        .updateLabelCaptureSettings(modeId: _labelCapture._modeId, settingsJson: jsonEncode(settings.toMap()))
         .then((value) => null, onError: onError);
   }
 
