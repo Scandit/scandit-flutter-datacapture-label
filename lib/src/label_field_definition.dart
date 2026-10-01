@@ -16,7 +16,7 @@ abstract class LabelFieldDefinition implements Serializable {
   final String _name;
   final String _fieldType;
 
-  List<String> _valueRegexes = [];
+  List<String>? _valueRegexes;
 
   bool _isOptional = false;
 
@@ -39,8 +39,8 @@ abstract class LabelFieldDefinition implements Serializable {
     var json = <String, dynamic>{
       'name': name,
       'fieldType': _fieldType,
-      'patterns': valueRegexes,
       'optional': isOptional,
+      'patterns': _valueRegexes,
     };
     if (_numberOfMandatoryInstances != null) {
       json['number_of_mandatory_instances'] = _numberOfMandatoryInstances!;
@@ -53,7 +53,7 @@ abstract class LabelFieldDefinition implements Serializable {
 }
 
 abstract class LabelFieldDefinitionBuilder<BuilderType, FieldType> {
-  List<String> _valueRegexes = [];
+  List<String>? _valueRegexes;
   Map<String, dynamic> _hiddenProperties = {};
   bool _isOptional = false;
   int? _numberOfMandatoryInstances;
@@ -64,7 +64,7 @@ abstract class LabelFieldDefinitionBuilder<BuilderType, FieldType> {
   }
 
   BuilderType setValueRegex(String valueRegex) {
-    _valueRegexes.add(valueRegex);
+    _valueRegexes = [...(_valueRegexes ?? []), valueRegex];
     return this as BuilderType;
   }
 
@@ -92,7 +92,13 @@ abstract class LabelFieldDefinitionBuilder<BuilderType, FieldType> {
 abstract class BarcodeField extends LabelFieldDefinition {
   final List<SymbologySettings> _symbologies;
 
-  BarcodeField._(super.name, this._symbologies, super._fieldType) : super._();
+  BarcodeField._(super.name, this._symbologies, super._fieldType) : super._() {
+    // Custom barcode fields have no native default symbology, so at least one must be set.
+    // Semantic fields (IMEI, serial number, part number) default natively when omitted.
+    if (_symbologies.isEmpty && _fieldType == 'customBarcode') {
+      throw ArgumentError('A custom barcode label field requires at least one symbology.');
+    }
+  }
 
   BarcodeField._fromSymbologies(String name, List<Symbology> symbologies, String fieldType)
       : this._(
@@ -111,9 +117,9 @@ abstract class BarcodeField extends LabelFieldDefinition {
   @override
   Map<String, dynamic> toMap() {
     var json = super.toMap();
-    // Only serialize symbologies when explicitly set. Emitting an empty map would tell the
-    // native layer to clear the symbologies, overriding the type-appropriate defaults that
-    // semantic fields (IMEI, serial number, part number) otherwise receive natively.
+    // Only serialize symbologies when explicitly set. When omitted, the native layer
+    // applies the type-appropriate defaults (custom barcode fields have none and require
+    // at least one symbology; semantic fields like IMEI/serial/part number default natively).
     if (symbologies.isNotEmpty) {
       json['symbologies'] = {for (var setting in symbologies) setting.symbology.toString(): setting.toMap()};
     }
@@ -181,7 +187,7 @@ class CustomBarcode extends BarcodeField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
@@ -195,9 +201,7 @@ class CustomBarcode extends BarcodeField {
     if (_locationType != null) {
       json['locationType'] = _locationType?.toString();
     }
-    if (_anchorRegexes != null) {
-      json['dataTypePatterns'] = _anchorRegexes;
-    }
+    json['dataTypePatterns'] = _anchorRegexes;
     if (_location != null) {
       json['location'] = _location?.toMap();
     }
@@ -226,15 +230,13 @@ class CustomBarcodeBuilder extends BarcodeFieldBuilder<CustomBarcodeBuilder, Cus
   }
 
   CustomBarcode build(String name) {
-    var barcode = CustomBarcode._fromSymbologies(name, symbologies, 'customBarcode')
-      .._valueRegexes = _valueRegexes
+    final instance = CustomBarcode._fromSymbologies(name, symbologies, 'customBarcode')
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      barcode._anchorRegexes = _anchorRegexes;
-    }
-    return barcode;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -246,9 +248,7 @@ abstract class TextField extends LabelFieldDefinition {
   @override
   Map<String, dynamic> toMap() {
     var json = super.toMap();
-    if (_anchorRegexes != null) {
-      json['dataTypePatterns'] = _anchorRegexes;
-    }
+    json['dataTypePatterns'] = _anchorRegexes;
     return json;
   }
 }
@@ -284,7 +284,7 @@ class CustomText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
@@ -328,15 +328,13 @@ class CustomTextBuilder extends TextFieldBuilder<CustomTextBuilder, CustomText> 
   }
 
   CustomText build(String name) {
-    var text = CustomText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = CustomText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -354,7 +352,7 @@ class ExpiryDateText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
@@ -400,16 +398,14 @@ class ExpiryDateTextBuilder extends TextFieldBuilder<ExpiryDateTextBuilder, Expi
   }
 
   ExpiryDateText build(String name) {
-    var text = ExpiryDateText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = ExpiryDateText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties
       ..labelDateFormat = _labelDateFormat;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -436,7 +432,7 @@ class ImeiOneBarcode extends BarcodeField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
@@ -447,11 +443,12 @@ class ImeiOneBarcode extends BarcodeField {
 
 class ImeiOneBarcodeBuilder extends BarcodeFieldBuilder<ImeiOneBarcodeBuilder, ImeiOneBarcode> {
   ImeiOneBarcode build(String name) {
-    return ImeiOneBarcode._fromSymbologies(name, symbologies, 'imeiOneBarcode')
-      .._valueRegexes.addAll(_valueRegexes)
+    final instance = ImeiOneBarcode._fromSymbologies(name, symbologies, 'imeiOneBarcode')
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    return instance;
   }
 }
 
@@ -479,7 +476,7 @@ class ImeiTwoBarcode extends BarcodeField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
@@ -490,11 +487,12 @@ class ImeiTwoBarcode extends BarcodeField {
 
 class ImeiTwoBarcodeBuilder extends BarcodeFieldBuilder<ImeiTwoBarcodeBuilder, ImeiTwoBarcode> {
   ImeiTwoBarcode build(String name) {
-    return ImeiTwoBarcode._fromSymbologies(name, symbologies, 'imeiTwoBarcode')
-      .._valueRegexes.addAll(_valueRegexes)
+    final instance = ImeiTwoBarcode._fromSymbologies(name, symbologies, 'imeiTwoBarcode')
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    return instance;
   }
 }
 
@@ -512,7 +510,7 @@ class PackingDateText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
@@ -558,16 +556,14 @@ class PackingDateTextBuilder extends TextFieldBuilder<PackingDateTextBuilder, Pa
   }
 
   PackingDateText build(String name) {
-    var text = PackingDateText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = PackingDateText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties
       ..labelDateFormat = _labelDateFormat;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -595,7 +591,7 @@ class PartNumberBarcode extends BarcodeField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
@@ -606,11 +602,12 @@ class PartNumberBarcode extends BarcodeField {
 
 class PartNumberBarcodeBuilder extends BarcodeFieldBuilder<PartNumberBarcodeBuilder, PartNumberBarcode> {
   PartNumberBarcode build(String name) {
-    return PartNumberBarcode._fromSymbologies(name, symbologies, 'partNumberBarcode')
-      .._valueRegexes = _valueRegexes
+    final instance = PartNumberBarcode._fromSymbologies(name, symbologies, 'partNumberBarcode')
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    return instance;
   }
 }
 
@@ -638,7 +635,7 @@ class SerialNumberBarcode extends BarcodeField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   List<SymbologySettings> get symbologies => _symbologies;
@@ -649,11 +646,12 @@ class SerialNumberBarcode extends BarcodeField {
 
 class SerialNumberBarcodeBuilder extends BarcodeFieldBuilder<SerialNumberBarcodeBuilder, SerialNumberBarcode> {
   SerialNumberBarcode build(String name) {
-    return SerialNumberBarcode._fromSymbologies(name, symbologies, 'serialNumberBarcode')
-      .._valueRegexes.addAll(_valueRegexes)
+    final instance = SerialNumberBarcode._fromSymbologies(name, symbologies, 'serialNumberBarcode')
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties.addAll(_hiddenProperties);
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    return instance;
   }
 }
 
@@ -667,7 +665,7 @@ class TotalPriceText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   List<String> get anchorRegexes => _anchorRegexes ?? [];
 
@@ -701,15 +699,13 @@ class TotalPriceTextBuilder extends TextFieldBuilder<TotalPriceTextBuilder, Tota
   }
 
   TotalPriceText build(String name) {
-    var text = TotalPriceText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = TotalPriceText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -723,7 +719,7 @@ class UnitPriceText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   List<String> get anchorRegexes => _anchorRegexes ?? [];
 
@@ -757,15 +753,13 @@ class UnitPriceTextBuilder extends TextFieldBuilder<UnitPriceTextBuilder, UnitPr
   }
 
   UnitPriceText build(String name) {
-    var text = UnitPriceText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = UnitPriceText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
       .._hiddenProperties = _hiddenProperties;
-    if (_anchorRegexes != null) {
-      text._anchorRegexes = _anchorRegexes;
-    }
-    return text;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -779,7 +773,7 @@ class WeightText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   List<String> get anchorRegexes => _anchorRegexes ?? [];
 
@@ -813,12 +807,13 @@ class WeightTextBuilder extends TextFieldBuilder<WeightTextBuilder, WeightText> 
   }
 
   WeightText build(String name) {
-    return WeightText(name)
-      .._valueRegexes = _valueRegexes
+    final instance = WeightText(name)
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties
-      .._anchorRegexes = _anchorRegexes;
+      .._hiddenProperties = _hiddenProperties;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
 
@@ -838,7 +833,7 @@ class DateText extends TextField {
   String get name => _name;
 
   @override
-  List<String> get valueRegexes => _valueRegexes;
+  List<String> get valueRegexes => _valueRegexes ?? [];
 
   @override
   int? get numberOfMandatoryInstances => _numberOfMandatoryInstances;
@@ -872,11 +867,12 @@ class DateTextBuilder extends TextFieldBuilder<DateTextBuilder, DateText> {
   }
 
   DateText build(String name) {
-    return DateText(name, _labelDateFormat ?? LabelDateFormat(LabelDateComponentFormat.dmy, true))
-      .._valueRegexes = _valueRegexes
+    final instance = DateText(name, _labelDateFormat ?? LabelDateFormat(LabelDateComponentFormat.dmy, true))
       .._isOptional = _isOptional
       .._numberOfMandatoryInstances = _numberOfMandatoryInstances
-      .._hiddenProperties = _hiddenProperties
-      .._anchorRegexes = _anchorRegexes;
+      .._hiddenProperties = _hiddenProperties;
+    if (_valueRegexes != null) instance._valueRegexes = _valueRegexes;
+    if (_anchorRegexes != null) instance._anchorRegexes = _anchorRegexes;
+    return instance;
   }
 }
