@@ -63,7 +63,7 @@ class LabelMethodHandler {
   }
 
   /// Updates the label capture mode configuration
-  Future<void> updateLabelCaptureMode({required String modeJson}) async {
+  Future<void> updateLabelCaptureMode({required Map<String, dynamic> modeJson}) async {
     final params = {
       'modeJson': modeJson,
     };
@@ -71,7 +71,7 @@ class LabelMethodHandler {
   }
 
   /// Updates the label capture mode settings
-  Future<void> updateLabelCaptureSettings({required int modeId, required String settingsJson}) async {
+  Future<void> updateLabelCaptureSettings({required int modeId, required Map<String, dynamic> settingsJson}) async {
     final params = {
       'modeId': modeId,
       'settingsJson': settingsJson,

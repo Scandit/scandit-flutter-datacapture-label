@@ -1,6 +1,6 @@
 name: scandit_flutter_datacapture_label
 description: This plugin coordinates the process of simultaneously capturing data contained in multiple barcodes and text.
-version: 8.6.2
+version: 8.5.5
 homepage: https://scandit.com
 
 
@@ -14,9 +14,9 @@ dependencies:
     sdk: flutter
   meta: ^1.3.0
   scandit_flutter_datacapture_core:
-    '>=8.6.2 <8.6.3'
+    '>=8.5.5 <8.5.6'
   scandit_flutter_datacapture_barcode:
-    '>=8.6.2 <8.6.3'
+    '>=8.5.5 <8.5.6'
 
 dev_dependencies:
   flutter_test:
