@@ -7,6 +7,11 @@
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
 import 'package:scandit_flutter_datacapture_label/src/label_field_location_type.dart';
 
+/// Defines the expected location of a field within a label. This class allows you to specify either exact coordinates or predefined relative positions where a field should be searched for during label capture.
+///
+/// Field locations help constrain the search area and improve recognition accuracy by focusing the capture engine on specific regions of the label.
+///
+/// Added in version 7.2.0
 class LabelFieldLocation implements Serializable {
   Rect? _rect;
   LabelFieldLocationType? _type;
@@ -57,6 +62,9 @@ class LabelFieldLocation implements Serializable {
     return LabelFieldLocation._(null, LabelFieldLocationType.center);
   }
 
+  /// Constructs a new Label Field Location with the predefined location type corresponding to the whole label.
+  ///
+  /// Added in version 7.2.0
   factory LabelFieldLocation.wholeLabel() {
     return LabelFieldLocation._(null, LabelFieldLocationType.wholeLabel);
   }
