@@ -4,13 +4,7 @@
  * Copyright (C) 2025- Scandit AG. All rights reserved.
  */
 
-/// Defines the type of document that can be recognized by the adaptive recognition system.
-///
-/// Added in version 8.2.0
 enum AdaptiveRecognitionResultType {
-  /// Receipt document type.
-  ///
-  /// Added in version 8.2.0
   receipt('receipt');
 
   const AdaptiveRecognitionResultType(this._name);

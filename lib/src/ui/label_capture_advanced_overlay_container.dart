@@ -6,9 +6,6 @@
 
 import 'package:flutter/widgets.dart';
 
-/// A container widget that needs to be used as a root of the widget displayed for a [CapturedLabel] through a [LabelCaptureAdvancedOverlay].
-///
-/// Added in version 7.2.0
 class LabelCaptureAdvancedOverlayContainer extends Container {
   LabelCaptureAdvancedOverlayContainer({
     super.key,
@@ -27,9 +24,6 @@ class LabelCaptureAdvancedOverlayContainer extends Container {
     super.clipBehavior,
   });
 
-  /// Builds the widget’s visual representation.
-  ///
-  /// Added in version 7.2.0
   @override
   // ignore: unnecessary_overrides
   Widget build(BuildContext context) {
