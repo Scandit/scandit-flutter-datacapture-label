@@ -32,8 +32,9 @@ public class LabelMethodHandler implements MethodChannel.MethodCallHandler {
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-        if (call.method.equals("getDefaults")) {
-            result.success(new JSONObject(getLabelCaptureModule().getDefaults()).toString());
+        if (call.method.equals("getDynamicDefaults")) {
+            // Only the defaults Dart cannot source from its generated static consts.
+            result.success(new JSONObject(getLabelCaptureModule().getDynamicDefaults()).toString());
             return;
         } else if (call.method.equals("executeLabel")) {
             CoreModule coreModule = (CoreModule) getModule(CoreModule.class.getSimpleName());

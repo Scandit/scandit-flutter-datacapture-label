@@ -19,21 +19,9 @@ class LabelMethodCallHandler {
     @objc
     func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
-        case "getDefaults":
-            do {
-                let defaultsJSONString = String(
-                    data: try JSONSerialization.data(
-                        withJSONObject: self.labelModule.getDefaults(),
-                        options: []
-                    ),
-                    encoding: .utf8
-                )
-                result(defaultsJSONString)
-            } catch let error as NSError {
-                result(
-                    FlutterError(code: "-1", message: "Unable to load the defaults. \(error)", details: error.domain)
-                )
-            }
+        // Only the defaults Dart cannot source from its generated static consts.
+        case "getDynamicDefaults":
+            self.reply(defaults: self.labelModule.getDynamicDefaults(), result: result)
         case "executeLabel":
             let coreModuleName = String(describing: CoreModule.self)
             guard let coreModule = DefaultServiceLocator.shared.resolve(clazzName: coreModuleName) as? CoreModule else {
@@ -61,6 +49,23 @@ class LabelMethodCallHandler {
 
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func reply(defaults: [String: Any?], result: @escaping FlutterResult) {
+        do {
+            let defaultsJSONString = String(
+                data: try JSONSerialization.data(
+                    withJSONObject: defaults,
+                    options: []
+                ),
+                encoding: .utf8
+            )
+            result(defaultsJSONString)
+        } catch let error as NSError {
+            result(
+                FlutterError(code: "-1", message: "Unable to load the defaults. \(error)", details: error.domain)
+            )
         }
     }
 }

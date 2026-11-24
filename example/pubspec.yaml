@@ -1,0 +1,37 @@
+name: scandit_flutter_datacapture_label_example
+description: Demonstrates how to use the scandit_flutter_datacapture_label plugin.
+
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.44.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: '>=1.0.0 <1.4.0'
+
+  scandit_flutter_datacapture_label_text:
+    path: ../../scandit-flutter-datacapture-label-text
+
+  scandit_flutter_datacapture_label:
+    path: ../
+  scandit_flutter_datacapture_barcode:
+    path: ../../scandit-flutter-datacapture-barcode
+  scandit_flutter_datacapture_core:
+    path: ../../scandit-flutter-datacapture-core
+  # A regular dependency, not dev_dependency: this app reads the shared
+  # frame-fixture corpus at runtime (fixtures.dart), and Flutter only
+  # bundles a dependency package's assets when it is a normal dependency of
+  # the app being built (SDC-33110).
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  config:
+    enable-swift-package-manager: true

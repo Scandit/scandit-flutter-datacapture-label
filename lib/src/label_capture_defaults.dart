@@ -5,20 +5,106 @@
  */
 
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:scandit_flutter_datacapture_core/scandit_flutter_datacapture_core.dart';
+// ignore: implementation_imports
+import 'package:scandit_flutter_datacapture_core/src/internal/logging/logging_method_channel.dart';
+
+import 'generated/label_generated_defaults.dart';
+
+// Picks the platform-split value of a generated default. Kept private: a
+// small per-package helper, mirroring core's and id's, so this package
+// doesn't need a cross-package dependency just for this.
+T _platformDefault<T>({required T android, required T ios}) => Platform.isIOS ? ios : android;
+
+// Builds a Brush from a generated flat {fillColor, strokeColor, strokeWidth}
+// default literal - the shape the wrappers actually emit - matching the native
+// getDefaults() snapshot at
+// scripts/defaults_generator/defaults/generated/expected_defaults_*.json.
+Brush _buildStaticBrush(Map<String, Object?> json) {
+  final fillColor = ColorDeserializer.fromRgbaHex(json['fillColor'] as String? ?? '#00000000');
+  final strokeColor = ColorDeserializer.fromRgbaHex(json['strokeColor'] as String? ?? '#00000000');
+  final strokeWidth = (json['strokeWidth'] as num?)?.toDouble() ?? 0.0;
+  return Brush(fillColor, strokeColor, strokeWidth);
+}
+
+// Builds a Feedback from a generated {vibration, sound} default literal.
+Feedback _buildStaticFeedback(Map<String, Object?> json) {
+  final vibrationJson = json['vibration'] as Map<String, Object?>?;
+  final soundJson = json['sound'] as Map<String, Object?>?;
+
+  Vibration? vibration;
+  if (vibrationJson != null) {
+    switch (vibrationJson['type']) {
+      case 'selectionHaptic':
+        vibration = Vibration.selectionHapticFeedback;
+        break;
+      case 'successHaptic':
+        vibration = Vibration.successHapticFeedback;
+        break;
+      default:
+        vibration = Vibration.defaultVibration;
+    }
+  }
+
+  Sound? sound;
+  if (soundJson != null) {
+    sound = soundJson.containsKey('resource') ? Sound(soundJson['resource'] as String?) : Sound(null);
+  }
+
+  return Feedback(vibration, sound);
+}
+
+LabelCaptureBasicOverlayDefaults _buildStaticLabelCaptureBasicOverlayDefaults() {
+  return LabelCaptureBasicOverlayDefaults(
+    // Colours are platform-split: the Android wrapper rounds native's float
+    // channels half-up while iOS truncates, so e.g. gray(0.7f) is #B3 vs #B2.
+    // See label.json for the full note.
+    _buildStaticBrush(_platformDefault(
+      android: LabelCaptureBasicOverlayGeneratedDefaults.DefaultLabelBrushAndroid,
+      ios: LabelCaptureBasicOverlayGeneratedDefaults.DefaultLabelBrushIos,
+    )),
+    _buildStaticBrush(_platformDefault(
+      android: LabelCaptureBasicOverlayGeneratedDefaults.DefaultCapturedFieldBrushAndroid,
+      ios: LabelCaptureBasicOverlayGeneratedDefaults.DefaultCapturedFieldBrushIos,
+    )),
+    _buildStaticBrush(_platformDefault(
+      android: LabelCaptureBasicOverlayGeneratedDefaults.DefaultPredictedFieldBrushAndroid,
+      ios: LabelCaptureBasicOverlayGeneratedDefaults.DefaultPredictedFieldBrushIos,
+    )),
+  );
+}
+
+LabelCaptureFeedbackDefaults _buildStaticLabelCaptureFeedbackDefaults() {
+  final success = _platformDefault(
+    android: FeedbackGeneratedDefaults.successAndroid,
+    ios: FeedbackGeneratedDefaults.successIos,
+  );
+  return LabelCaptureFeedbackDefaults(_buildStaticFeedback(success));
+}
 
 // ignore: avoid_classes_with_only_static_members
 class LabelCaptureDefaults {
   // Expose channel for testing
-  static MethodChannel channel = const MethodChannel('com.scandit.datacapture.label/method_channel');
+  static MethodChannel channel = const LoggingMethodChannel('com.scandit.datacapture.label/method_channel');
 
+  // Statically sourced from generated/label_generated_defaults.dart - byte
+  // identical to the native getDefaults() response, available immediately,
+  // no method-channel round trip needed. See SDC-32174.
+  static final LabelCaptureBasicOverlayDefaults _labelCaptureBasicOverlayDefaults =
+      _buildStaticLabelCaptureBasicOverlayDefaults();
+  static final LabelCaptureFeedbackDefaults _labelCaptureFeedbackDefaults = _buildStaticLabelCaptureFeedbackDefaults();
+
+  // RecommendedCameraSettings is intentionally NOT staticized (native can't
+  // be proven to emit the hardcoded Android wrapper values - see id package
+  // for the full rationale) and LabelCaptureValidationFlowOverlay is
+  // fully dynamic locale-dependent text, never in the generated consts.
+  // Both stay fully dynamic.
   static late CameraSettingsDefaults _cameraSettingsDefaults;
-  static late LabelCaptureBasicOverlayDefaults _labelCaptureBasicOverlayDefaults;
   static late LabelCaptureValidationFlowOverlayDefaults _labelCaptureValidationFlowOverlayDefaults;
-  static late LabelCaptureFeedbackDefaults _labelCaptureFeedbackDefaults;
 
   static CameraSettingsDefaults get cameraSettingsDefaults => _cameraSettingsDefaults;
 
@@ -33,15 +119,16 @@ class LabelCaptureDefaults {
 
   static Future<void> initializeDefaults() async {
     if (_isInitialized) return;
-    // getDefaults is a direct method call (not routed through executeLabel)
-    var result = await channel.invokeMethod('getDefaults');
+    // Narrow endpoint: only RecommendedCameraSettings and
+    // LabelCaptureValidationFlowOverlay, the residual keys read below.
+    // It is the only defaults endpoint - the full-blob getDefaults was removed
+    // in SDC-32178 - and a direct method call (not routed through executeLabel).
+    var result = await channel.invokeMethod('getDynamicDefaults');
 
     var json = jsonDecode(result as String);
     _cameraSettingsDefaults = CameraSettingsDefaults.fromJSON(json['RecommendedCameraSettings']);
-    _labelCaptureBasicOverlayDefaults = LabelCaptureBasicOverlayDefaults.fromJSON(json['LabelCaptureBasicOverlay']);
     _labelCaptureValidationFlowOverlayDefaults =
         LabelCaptureValidationFlowOverlayDefaults.fromJSON(json['LabelCaptureValidationFlowOverlay']);
-    _labelCaptureFeedbackDefaults = LabelCaptureFeedbackDefaults.fromJSON(jsonDecode(json['feedback']));
 
     _isInitialized = true;
   }
